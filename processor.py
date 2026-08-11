@@ -1,22 +1,27 @@
-import time
-from typing import List, Any
+import json
+from typing import Any, Dict
 
-class DataProcessor:
-    def __init__(self, data: List[Any]):
-        self.data = data
 
-    def process_data(self) -> List[Any]:
-        start_time = time.time()
-        optimized_data = self._optimize_data(self.data)
-        end_time = time.time()
-        print(f"Data processed in {{end_time - start_time}} seconds")
-        return optimized_data
+def load_json(file_path: str) -> Dict[str, Any]:
+    """Load JSON data from a file."
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return json.load(file)
 
-    def _optimize_data(self, data: List[Any]) -> List[Any]:
-        return list(set(data))  # Removes duplicates
 
-# Example usage
-if __name__ == '__main__':
-    processor = DataProcessor([1, 2, 2, 3, 4, 4, 5])
-    result = processor.process_data()
-    print(result)  # Output: [1, 2, 3, 4, 5]
+def save_json(data: Dict[str, Any], file_path: str) -> None:
+    """Save data to a JSON file."
+    with open(file_path, 'w', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
+
+
+def update_json(file_path: str, updates: Dict[str, Any]) -> None:
+    """Update a JSON file with new data."
+    data = load_json(file_path)
+    data.update(updates)
+    save_json(data, file_path)
+
+
+def clear_json(file_path: str) -> None:
+    """Clear all data in a JSON file."
+    with open(file_path, 'w', encoding='utf-8') as file:
+        json.dump({}, file)
