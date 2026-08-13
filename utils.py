@@ -1,48 +1,31 @@
 import json
-from typing import Any, Dict, List, Union
+from typing import Any, Dict
 
-def read_json(file_path: str) -> Union[Dict[str, Any], List[Any]]:
-    """
-    Read a JSON file and return its content.
-    """
+
+def read_json_file(file_path: str) -> Dict[str, Any]:
+    """Reads a JSON file and returns its content as a dictionary."""
     with open(file_path, 'r') as file:
         return json.load(file)
 
 
-def write_json(file_path: str, data: Union[Dict[str, Any], List[Any]]) -> None:
-    """
-    Write data to a JSON file.
-    """
+def write_json_file(file_path: str, data: Dict[str, Any]) -> None:
+    """Writes a dictionary to a JSON file."""
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
 
-def flatten_dict(nested_dict: Dict[str, Any], parent_key: str = '', sep: str = '_') -> Dict[str, Any]:
-    """
-    Flatten a nested dictionary.
-    """
-    items = []
-    for k, v in nested_dict.items():
-        new_key = f'{parent_key}{sep}{k}' if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
+def merge_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
+    """Merges two dictionaries into one, with dict2 values overriding dict1."""
+    merged_dict = dict1.copy()
+    merged_dict.update(dict2)
+    return merged_dict
 
 
-def is_empty(value: Any) -> bool:
-    """
-    Check if a value is empty.
-    """
-    if isinstance(value, (list, dict, str)):
-        return len(value) == 0
-    return value is None
+def validate_key_exists(dictionary: Dict[str, Any], key: str) -> bool:
+    """Checks if a key exists in a dictionary."""
+    return key in dictionary
 
 
-def generate_unique_id(prefix: str = '') -> str:
-    """
-    Generate a unique identifier string.
-    """
-    import uuid
-    return f'{prefix}{uuid.uuid4()}'
+def format_string(template: str, **kwargs: Any) -> str:
+    """Formats a string using placeholders with keyword arguments."""
+    return template.format(**kwargs)
