@@ -1,31 +1,28 @@
-import time
-from typing import List, Dict
+import json
+import re
 
-class PerformanceOptimized:
-    def __init__(self):
-        self.data_cache: Dict[str, str] = {}
+# Function to validate user input
 
-    def fetch_data(self, key: str) -> str:
-        if key in self.data_cache:
-            return self.data_cache[key]  # Return cached data
-        
-        # Simulate fetching data (e.g., from an API or database)
-        result = self._simulate_data_fetch(key)
-        self.data_cache[key] = result  # Cache the result
-        return result
+def validate_input(user_input):
+    # Check if input is a valid Roblox username (alphanumeric and underscores)
+    pattern = r'^[a-zA-Z0-9_]{3,20}$'
+    if not re.match(pattern, user_input):
+        return False, 'Invalid username'
+    return True, 'Valid username'
 
-    def _simulate_data_fetch(self, key: str) -> str:
-        time.sleep(1)  # Simulate a delay
-        return f'Data for {key}'
+# Main processing loop
 
-    def batch_fetch_data(self, keys: List[str]) -> List[str]:
-        results = []
-        for key in keys:
-            results.append(self.fetch_data(key))
-        return results
+def main_loop():
+    while True:
+        user_input = input('Enter Roblox username (type "exit" to quit): ')
+        if user_input.lower() == 'exit':
+            break
+        is_valid, message = validate_input(user_input)
+        if is_valid:
+            print(f'Proceeding with valid input: {user_input}')
+            # Further processing of the input
+        else:
+            print(message)
 
-# Example usage
 if __name__ == '__main__':
-    optimizer = PerformanceOptimized()
-    keys_to_fetch = ['key1', 'key2', 'key1']  # 'key1' will be fetched from cache
-    print(optimizer.batch_fetch_data(keys_to_fetch))
+    main_loop()
