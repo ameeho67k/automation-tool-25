@@ -1,37 +1,31 @@
-import json
-import os
+import time
+from typing import List, Dict
 
-DEFAULT_CONFIG = {
-    'username': 'Player',
-    'server': 'localhost',
-    'port': 5432,
-    'game_mode': 'casual',
-}
+class PerformanceOptimized:
+    def __init__(self):
+        self.data_cache: Dict[str, str] = {}
 
-class ConfigLoader:
-    def __init__(self, config_file='config.json'):
-        self.config_file = config_file
-        self.config = DEFAULT_CONFIG
-        self.load_config()
+    def fetch_data(self, key: str) -> str:
+        if key in self.data_cache:
+            return self.data_cache[key]  # Return cached data
+        
+        # Simulate fetching data (e.g., from an API or database)
+        result = self._simulate_data_fetch(key)
+        self.data_cache[key] = result  # Cache the result
+        return result
 
-    def load_config(self):
-        if os.path.exists(self.config_file):
-            with open(self.config_file, 'r') as f:
-                user_config = json.load(f)
-                self.config = {**DEFAULT_CONFIG, **user_config}
+    def _simulate_data_fetch(self, key: str) -> str:
+        time.sleep(1)  # Simulate a delay
+        return f'Data for {key}'
 
-    def get(self, key):
-        return self.config.get(key, DEFAULT_CONFIG.get(key))
+    def batch_fetch_data(self, keys: List[str]) -> List[str]:
+        results = []
+        for key in keys:
+            results.append(self.fetch_data(key))
+        return results
 
-    def set(self, key, value):
-        self.config[key] = value
-        self.save_config()
-
-    def save_config(self):
-        with open(self.config_file, 'w') as f:
-            json.dump(self.config, f, indent=4)
-
-# Example usage: 
-# loader = ConfigLoader()
-# print(loader.get('username'))
-# loader.set('username', 'NewPlayer')
+# Example usage
+if __name__ == '__main__':
+    optimizer = PerformanceOptimized()
+    keys_to_fetch = ['key1', 'key2', 'key1']  # 'key1' will be fetched from cache
+    print(optimizer.batch_fetch_data(keys_to_fetch))
