@@ -1,27 +1,39 @@
 import json
-from typing import Any, Dict
+import requests
+from requests.exceptions import RequestException
 
+class RobloxProcessor:
+    def __init__(self, api_url):
+        self.api_url = api_url
 
-def load_json(file_path: str) -> Dict[str, Any]:
-    """Load JSON data from a file."
-    with open(file_path, 'r', encoding='utf-8') as file:
-        return json.load(file)
+    def fetch_data(self, endpoint):
+        url = f'{self.api_url}/{endpoint}'
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # Raises an error for bad responses
+            return response.json()
+        except RequestException as e:
+            print(f'Error fetching data from {url}: {e}')  
+            return None
+        except json.JSONDecodeError:
+            print(f'Error decoding JSON response from {url}')
+            return None
 
+    def process_data(self, data):
+        if not data:
+            print('No data to process.')
+            return
+        # Assuming data needs to be a dictionary
+        if not isinstance(data, dict):
+            print('Expected data to be a dictionary.')
+            return
+        # Process the data
+        print(f'Processing data: {data}')
 
-def save_json(data: Dict[str, Any], file_path: str) -> None:
-    """Save data to a JSON file."
-    with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump(data, file, ensure_ascii=False, indent=4)
+    def run(self, endpoint):
+        data = self.fetch_data(endpoint)
+        self.process_data(data)
 
-
-def update_json(file_path: str, updates: Dict[str, Any]) -> None:
-    """Update a JSON file with new data."
-    data = load_json(file_path)
-    data.update(updates)
-    save_json(data, file_path)
-
-
-def clear_json(file_path: str) -> None:
-    """Clear all data in a JSON file."
-    with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump({}, file)
+if __name__ == '__main__':
+    processor = RobloxProcessor('https://api.example.com')
+    processor.run('dummy_endpoint')
