@@ -1,29 +1,36 @@
 import logging
-from typing import Optional
+import time
+from functools import wraps
 
+# Configure the logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-class Logger:
-    def __init__(self, name: str, level: Optional[int] = logging.INFO) -> None:
-        """Initializes a Logger instance with a given name and log level."""
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(level)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+# Retry decorator for handling network operations
 
-    def log_info(self, message: str) -> None:
-        """Logs an informational message."""
-        self.logger.info(message)
+def retry(max_retries=3, delay=2):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            while attempts < max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    attempts += 1
+                    logger.warning(f'Attempt {attempts} failed with error: {e}')
+                    if attempts >= max_retries:
+                        logger.error('Max retries reached. Operation failed.')
+                        raise
+                    time.sleep(delay)
+        return wrapper
+    return decorator
 
-    def log_warning(self, message: str) -> None:
-        """Logs a warning message."""
-        self.logger.warning(message)
-
-    def log_error(self, message: str) -> None:
-        """Logs an error message."""
-        self.logger.error(message)
-
-    def log_debug(self, message: str) -> None:
-        """Logs a debug message."""
-        self.logger.debug(message)
+# Example function that could fail due to network issues
+@retry(max_retries=5, delay=3)
+def fetch_data_from_api(url):
+    # Simulating a network operation
+    if url == 'http://fail.com':
+        raise ConnectionError('Failed to connect')
+    return {'data': 'success'}
