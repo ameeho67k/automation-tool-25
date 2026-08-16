@@ -1,36 +1,33 @@
 import logging
-import time
-from functools import wraps
 
-# Configure the logging
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+class Logger:
+    def __init__(self, name='automation_tool'):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)
 
-# Retry decorator for handling network operations
+    def debug(self, msg):
+        self.logger.debug(msg)
 
-def retry(max_retries=3, delay=2):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            attempts = 0
-            while attempts < max_retries:
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    attempts += 1
-                    logger.warning(f'Attempt {attempts} failed with error: {e}')
-                    if attempts >= max_retries:
-                        logger.error('Max retries reached. Operation failed.')
-                        raise
-                    time.sleep(delay)
-        return wrapper
-    return decorator
+    def info(self, msg):
+        self.logger.info(msg)
 
-# Example function that could fail due to network issues
-@retry(max_retries=5, delay=3)
-def fetch_data_from_api(url):
-    # Simulating a network operation
-    if url == 'http://fail.com':
-        raise ConnectionError('Failed to connect')
-    return {'data': 'success'}
+    def warning(self, msg):
+        self.logger.warning(msg)
+
+    def error(self, msg):
+        self.logger.error(msg)
+
+    def critical(self, msg):
+        self.logger.critical(msg)
+
+logger = Logger()  # Create logger instance
+
+if __name__ == '__main__':
+    logger.info('Logger initialized')
+    logger.debug('This is a debug message')
+    logger.error('This is an error message')
