@@ -1,36 +1,32 @@
-def read_file(file_path):
-    """Read the contents of a file and return it as a string."""
-    with open(file_path, 'r') as file:
-        return file.read()
+import json
+from typing import Any, Dict
 
 
-def write_file(file_path, content):
-    """Write the provided content to a file at the given path."""
-    with open(file_path, 'w') as file:
-        file.write(content)
+def read_json_file(filepath: str) -> Dict[str, Any]:
+    """Reads a JSON file and returns its content as a dictionary."""
+    try:
+        with open(filepath, 'r') as file:
+            data = json.load(file)
+            return data
+    except FileNotFoundError:
+        print(f'Error: The file {filepath} was not found.')
+        return {}
+    except json.JSONDecodeError:
+        print(f'Error: The file {filepath} is not a valid JSON.')
+        return {}
 
 
-def append_to_file(file_path, content):
-    """Append the provided content to a file at the given path."""
-    with open(file_path, 'a') as file:
-        file.write(content)
+def write_json_file(filepath: str, data: Dict[str, Any]) -> None:
+    """Writes a dictionary to a JSON file."""
+    try:
+        with open(filepath, 'w') as file:
+            json.dump(data, file, indent=4)
+    except IOError as e:
+        print(f'Error: An I/O error occurred while writing to {filepath}. {e}')
 
 
-def list_files_in_directory(directory_path):
-    """Return a list of files in the specified directory."""
-    import os
-    return [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f))]
-
-
-def read_json(file_path):
-    """Read a JSON file and return its contents as a dictionary."""
-    import json
-    with open(file_path, 'r') as file:
-        return json.load(file)
-
-
-def write_json(file_path, data):
-    """Write a dictionary to a JSON file at the given path."""
-    import json
-    with open(file_path, 'w') as file:
-        json.dump(data, file, indent=4)
+def update_json_file(filepath: str, new_data: Dict[str, Any]) -> None:
+    """Updates a JSON file with new data, merging with existing data."""
+    existing_data = read_json_file(filepath)
+    existing_data.update(new_data)
+    write_json_file(filepath, existing_data)
