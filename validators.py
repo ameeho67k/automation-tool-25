@@ -1,26 +1,36 @@
-def validate_input(user_input):
+def validate_user_input(user_input):
     """
-    Validates user input for the automation tool.
-    Checks if the input is a non-empty string and contains only allowed characters.
+    Validates the user input from Roblox platform.
+    Ensures that the input meets the required criteria.
     """
-    allowed_characters = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_')
     if not isinstance(user_input, str):
-        raise ValueError('Input must be a string.')
-    if not user_input:
-        raise ValueError('Input cannot be empty.')
-    if any(char not in allowed_characters for char in user_input):
-        raise ValueError('Input contains invalid characters.')
+        raise ValueError("Input must be a string")
+    if len(user_input) < 3 or len(user_input) > 20:
+        raise ValueError("Input length must be between 3 and 20 characters")
+    if not user_input.isalnum():
+        raise ValueError("Input must only contain alphanumeric characters")
     return True
 
-def main_processing_loop():
-    while True:
-        user_input = input('Enter the command: ')
-        try:
-            validate_input(user_input)
-            # Further processing of validated input
-            print(f'Processing command: {user_input}')
-        except ValueError as e:
-            print(f'Error: {e}')
 
-if __name__ == '__main__':
-    main_processing_loop()
+def validate_game_id(game_id):
+    """
+    Validates the game ID to ensure it's a valid format.
+    """
+    if not isinstance(game_id, int):
+        raise ValueError("Game ID must be an integer")
+    if game_id <= 0:
+        raise ValueError("Game ID must be a positive integer")
+    return True
+
+
+def validate_username(username):
+    """
+    Validates the username against Roblox standards.
+    """
+    if not isinstance(username, str):
+        raise ValueError("Username must be a string")
+    if len(username) < 3 or len(username) > 20:
+        raise ValueError("Username length must be between 3 and 20 characters")
+    if not username[0].isalpha():
+        raise ValueError("Username must start with a letter")
+    return True
