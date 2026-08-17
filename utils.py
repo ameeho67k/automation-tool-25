@@ -1,31 +1,40 @@
 import json
-from typing import Any, Dict
+from datetime import datetime
 
 
-def read_json_file(file_path: str) -> Dict[str, Any]:
-    """Reads a JSON file and returns its content as a dictionary."""
-    with open(file_path, 'r') as file:
-        return json.load(file)
+def read_json_file(file_path):
+    """Reads a JSON file and returns the data as a dictionary."""
+    try:
+        with open(file_path, 'r') as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f'Error reading {file_path}: {e}')
+        return None
 
 
-def write_json_file(file_path: str, data: Dict[str, Any]) -> None:
+def write_json_file(file_path, data):
     """Writes a dictionary to a JSON file."""
-    with open(file_path, 'w') as file:
-        json.dump(data, file, indent=4)
+    try:
+        with open(file_path, 'w') as file:
+            json.dump(data, file, indent=4)
+    except IOError as e:
+        print(f'Error writing to {file_path}: {e}')
 
 
-def merge_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
-    """Merges two dictionaries into one, with dict2 values overriding dict1."""
-    merged_dict = dict1.copy()
-    merged_dict.update(dict2)
-    return merged_dict
+def get_current_timestamp():
+    """Returns the current timestamp in ISO format."""
+    return datetime.now().isoformat()
 
 
-def validate_key_exists(dictionary: Dict[str, Any], key: str) -> bool:
-    """Checks if a key exists in a dictionary."""
-    return key in dictionary
+def filter_data_by_key(data, key):
+    """Filters a list of dictionaries based on a provided key."""
+    if not isinstance(data, list):
+        return []
+    return [item for item in data if key in item]
 
 
-def format_string(template: str, **kwargs: Any) -> str:
-    """Formats a string using placeholders with keyword arguments."""
-    return template.format(**kwargs)
+def transform_data(data, transform_func):
+    """Applies a transformation function to each item in a list."""
+    if not isinstance(data, list):
+        return []
+    return [transform_func(item) for item in data]
