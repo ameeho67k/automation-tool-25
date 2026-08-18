@@ -1,35 +1,29 @@
 import logging
-import os
-from logging.handlers import RotatingFileHandler
 
-def setup_logger(log_file='app.log', max_bytes=5*1024*1024, backup_count=3):
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+# Setting up the logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    # Create a rotating file handler
-    handler = RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=backup_count)
-    handler.setLevel(logging.DEBUG)
+# Function to log messages
 
-    # Create a console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+def log_message(message):
+    if not isinstance(message, str):
+        raise ValueError('Message must be a string')
+    logger.info(message)
 
-    # Create a formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
+# Main processing loop
 
-    # Add handlers to the logger
-    logger.addHandler(handler)
-    logger.addHandler(console_handler)
+def main_process(data_list):
+    for data in data_list:
+        try:
+            if not isinstance(data, dict):
+                raise ValueError('Each item must be a dictionary')
+            log_message(f'Processed data: {data}')
+        except ValueError as ve:
+            logger.error(f'ValueError: {ve}')
+        except Exception as e:
+            logger.error(f'An unexpected error occurred: {e}')
 
-    return logger
-
-# Example usage
 if __name__ == '__main__':
-    log = setup_logger()
-    log.debug('This is a debug message')
-    log.info('This is an info message')
-    log.warning('This is a warning message')
-    log.error('This is an error message')
-    log.critical('This is a critical message')
+    sample_data = [{'key1': 'value1'}, {'key2': 'value2'}, 'invalid']  # Invalid entry for demonstration
+    main_process(sample_data)
