@@ -1,28 +1,26 @@
-import json
-import re
+import time
 
-# Function to validate user input
+class PerformanceOptimized:
+    def __init__(self):
+        self.data_cache = {}
 
-def validate_input(user_input):
-    # Check if input is a valid Roblox username (alphanumeric and underscores)
-    pattern = r'^[a-zA-Z0-9_]{3,20}$'
-    if not re.match(pattern, user_input):
-        return False, 'Invalid username'
-    return True, 'Valid username'
+    def compute_heavy_task(self, input_data):
+        if input_data in self.data_cache:
+            return self.data_cache[input_data]
 
-# Main processing loop
+        # Simulate a heavy computation
+        time.sleep(2)  # Simulate time-consuming task
+        result = sum(input_data)  # Example computation
+        self.data_cache[input_data] = result  # Cache result
+        return result
 
-def main_loop():
-    while True:
-        user_input = input('Enter Roblox username (type "exit" to quit): ')
-        if user_input.lower() == 'exit':
-            break
-        is_valid, message = validate_input(user_input)
-        if is_valid:
-            print(f'Proceeding with valid input: {user_input}')
-            # Further processing of the input
-        else:
-            print(message)
+    def clear_cache(self):
+        self.data_cache.clear()
 
+# Example usage
 if __name__ == '__main__':
-    main_loop()
+    perf_opt = PerformanceOptimized()
+    result = perf_opt.compute_heavy_task((1, 2, 3, 4))  # First call, computes
+    print(result)
+    result = perf_opt.compute_heavy_task((1, 2, 3, 4))  # Second call, retrieves from cache
+    print(result)
