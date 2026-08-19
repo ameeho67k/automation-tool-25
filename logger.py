@@ -1,29 +1,31 @@
 import logging
 
-# Setting up the logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configuring logging settings
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Function to log messages
+class Logger:
+    def __init__(self, name):
+        self.logger = logging.getLogger(name)
 
-def log_message(message):
-    if not isinstance(message, str):
-        raise ValueError('Message must be a string')
-    logger.info(message)
+    def info(self, message):
+        self.logger.info(message)
 
-# Main processing loop
+    def warning(self, message):
+        self.logger.warning(message)
 
-def main_process(data_list):
-    for data in data_list:
-        try:
-            if not isinstance(data, dict):
-                raise ValueError('Each item must be a dictionary')
-            log_message(f'Processed data: {data}')
-        except ValueError as ve:
-            logger.error(f'ValueError: {ve}')
-        except Exception as e:
-            logger.error(f'An unexpected error occurred: {e}')
+    def error(self, message):
+        self.logger.error(message)
+
+    def debug(self, message):
+        self.logger.debug(message)
+
+# Create a default logger instance for use
+logger = Logger(__name__)
 
 if __name__ == '__main__':
-    sample_data = [{'key1': 'value1'}, {'key2': 'value2'}, 'invalid']  # Invalid entry for demonstration
-    main_process(sample_data)
+    # Testing the logger
+    logger.info("Logger initialized successfully.")
+    logger.debug("This is a debug message.")
+    logger.warning("This is a warning message.")
+    logger.error("This is an error message.")
