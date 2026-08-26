@@ -1,17 +1,16 @@
-# Automation Tool 25
+# automation-tool-25
 
-Automation Tool 25 is a powerful Python-based solution designed to streamline repetitive tasks and enhance productivity. With its modular architecture, users can easily extend its functionalities to suit various automation needs.
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+automation-tool-25 is a Python toolkit for automating Roblox platform operations. It enables developers to programmatically manage games, retrieve analytics, and handle administrative tasks through reliable API interfaces.
 
 ## Features
-
-- **Task Scheduler**: Schedule and automate tasks at regular intervals or trigger them based on events, reducing manual workloads.
-- **Dynamic Report Generation**: Create customizable reports in multiple formats (CSV, PDF) automatically from processed data, ensuring accuracy and saving time.
-- **API Integration**: Seamlessly connect with third-party APIs to fetch, update, or delete data, enabling versatile automation across different platforms.
-- **User-Friendly CLI**: A straightforward command-line interface that simplifies the execution of automation scripts, making it accessible for both beginners and advanced users.
+- API wrappers for updating game descriptions, thumbnails, and server settings using Universe IDs
+- Automated collection of player metrics and experience data with CSV and JSON export support
+- Bulk group management including member roles, shouts, and wall posts
+- Built-in task scheduler for recurring jobs with automatic retry and logging
 
 ## Installation
-
-To get started with Automation Tool 25, you'll need to have Python 3.7 or later installed on your machine. Use the following commands to install:
 
 ```bash
 git clone https://github.com/Developer/automation-tool-25.git
@@ -19,18 +18,17 @@ cd automation-tool-25
 pip install -r requirements.txt
 ```
 
-## Basic Usage Example
+## Usage
 
-Once installed, you can run a simple automation task with the following command:
+```python
+from automation_tool_25 import Client
 
-```bash
-python main.py --task "daily_report" --schedule "9:00 AM"
+client = Client(cookie="YOUR_ROBLOSECURITY_COOKIE")
+
+# Update game description
+client.set_game_description(universe_id=1234567890, description="Major update released.")
+
+# Get live player count
+count = client.get_player_count(place_id=9876543210)
+print(f"Players online: {count}")
 ```
-
-This command schedules the `daily_report` task to run every day at 9:00 AM, generating a report of your daily activities automatically.
-
-## License
-
-[MIT License](https://opensource.org/licenses/MIT) ![License Badge](https://img.shields.io/badge/license-MIT-brightgreen)
-
-Feel free to fork the project, contribute, or reach out for any assistance. Let's automate the mundane together!
