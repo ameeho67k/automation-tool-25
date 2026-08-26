@@ -1,36 +1,45 @@
-import re
-import time
+import json
+import os
+from typing import Any, Dict
 
-# Input validation for roblox automation tool
+DEFAULTS = {
+    "roblox_api_key": "",
+    "target_game": "",
+    "delay_seconds": 1.0,
+    "retry_count": 3,
+    "headless_mode": True,
+    "log_to_file": False,
+    "max_runtime_minutes": 60
+}
 
-def validate_input(data):
-    # Validate Roblox related input in loop
-    if not data or not isinstance(data, str):
-        return False
+def load_configuration(config_path: str = "config.json") -> Dict[str, Any]:
+    """Load config from JSON file with defaults fallback."""
+    config = DEFAULTS.copy()
+    
+    if os.path.isfile(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as file:
+                loaded = json.load(file)
+            for key in DEFAULTS:
+                if key in loaded:
+                    config[key] = loaded[key]
+        except (json.JSONDecodeError, IOError) as error:
+            print(f"Config load error: {error}. Using defaults.")
+    
+    return config
 
-    # Roblox username validation: 3-20 alphanum and _
-    if not re.match(r'^[a-zA-Z0-9_]{3,20}$', data):
-        return False
+def apply_defaults(user_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge user config with defaults."""
+    result = DEFAULTS.copy()
+    result.update({k: v for k, v in user_config.items() if k in DEFAULTS})
+    return result
 
-    # Avoid certain names
-    if data.lower() in ['admin', 'moderator']:
-        return False
+def process_config(config_path: str = "config.json") -> Dict[str, Any]:
+    """Main entry to load and process config with defaults."""
+    raw_config = load_configuration(config_path)
+    return apply_defaults(raw_config)
 
-    return True
-
-def main_processing_loop(inputs):
-    # The main loop implements input validation
-    processed = 0
-    for item in inputs:
-        if not validate_input(item):
-            print('Invalid input skipped: ' + item)
-            continue
-        print('Processing valid Roblox input: ' + item)
-        # Simulate automation
-        time.sleep(0.1)
-        processed += 1
-    print('Total processed: ' + str(processed))
-
-if __name__ == '__main__':
-    sample_data = ['player_one', 'bad-input', 'admin', 'user123', 'short', 'valid_user_name']
-    main_processing_loop(sample_data)
+if __name__ == "__main__":
+    config = process_config()
+    print("Processed config keys:", list(config.keys()))
+    print("Sample delay:", config["delay_seconds"])
