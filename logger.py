@@ -1,31 +1,54 @@
 import logging
+from logging.handlers import RotatingFileHandler
+import os
 
-# Configuring logging settings
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+def setup_logger(name: str = "automation_tool_25", log_file: str = "automation.log", level: int = logging.INFO) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
 
-class Logger:
-    def __init__(self, name):
-        self.logger = logging.getLogger(name)
+    # Prevent duplicate handlers if called multiple times
+    if logger.hasHandlers():
+        return logger
 
-    def info(self, message):
-        self.logger.info(message)
+    # Ensure logs directory exists
+    log_dir = "logs"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
 
-    def warning(self, message):
-        self.logger.warning(message)
+    log_path = os.path.join(log_dir, log_file)
 
-    def error(self, message):
-        self.logger.error(message)
+    # RotatingFileHandler for log rotation
+    # maxBytes=1MB, backupCount=5
+    file_handler = RotatingFileHandler(
+        log_path, maxBytes=1024*1024, backupCount=5
+    )
 
-    def debug(self, message):
-        self.logger.debug(message)
+    file_handler.setLevel(level)
 
-# Create a default logger instance for use
-logger = Logger(__name__)
+    # StreamHandler for console output
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
 
-if __name__ == '__main__':
-    # Testing the logger
-    logger.info("Logger initialized successfully.")
-    logger.debug("This is a debug message.")
-    logger.warning("This is a warning message.")
-    logger.error("This is an error message.")
+    # Standard formatter
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
+
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    return logger
+
+# Test if run directly
+if __name__ == "__main__":
+    logger = setup_logger()
+    logger.info("Logger setup complete with rotation enabled")
+    logger.debug("Debug message for testing")
+    logger.warning("Sample warning log")
+
+    # Generate logs to demonstrate rotation
+    for i in range(50):
+        logger.info("Test log entry number %d for rotation demo", i)
