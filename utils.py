@@ -1,40 +1,68 @@
 import json
-from datetime import datetime
+import os
+from typing import Any, Dict
 
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "roblox_settings": {
+        "username": "default_user",
+        "place_id": 123456789,
+        "server_join_delay": 5.0,
+        "action_delay": 1.5,
+        "max_retries": 5,
+        "use_proxy": False
+    },
+    "tool_settings": {
+        "log_to_file": True,
+        "log_level": "DEBUG",
+        "auto_save": True,
+        "max_runtime_minutes": 60
+    }
+}
 
-def read_json_file(file_path):
-    """Reads a JSON file and returns the data as a dictionary."""
+def load_config(config_path: str = "config.json") -> Dict[str, Any]:
+    """Load configuration merging file data with defaults.
+    If file does not exist, create it with defaults.
+    """
+    config = DEFAULT_CONFIG.copy()
+    if os.path.isfile(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as config_file:
+                user_config = json.load(config_file)
+            # Merge user config into defaults, handling nested dicts
+            def merge_dicts(base: Dict, update: Dict) -> Dict:
+                for key, value in update.items():
+                    if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                        base[key] = merge_dicts(base[key], value)
+                    else:
+                        base[key] = value
+                return base
+            config = merge_dicts(config, user_config)
+        except (json.JSONDecodeError, IOError, OSError) as error:
+            print(f"Warning: Could not load {config_path}: {error}")
+            print("Using default configuration.")
+    else:
+        try:
+            with open(config_path, "w", encoding="utf-8") as config_file:
+                json.dump(DEFAULT_CONFIG, config_file, indent=4)
+            print(f"Default configuration created at {config_path}")
+        except (IOError, OSError) as error:
+            print(f"Warning: Could not create {config_path}: {error}")
+    return config
+
+# Additional helper to save config
+def save_config(config: Dict[str, Any], config_path: str = "config.json") -> bool:
+    """Save the current config to file, overwriting if exists."""
     try:
-        with open(file_path, 'r') as file:
-            return json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f'Error reading {file_path}: {e}')
-        return None
+        with open(config_path, "w", encoding="utf-8") as config_file:
+            json.dump(config, config_file, indent=4)
+        return True
+    except (IOError, OSError) as error:
+        print(f"Error saving config: {error}")
+        return False
 
-
-def write_json_file(file_path, data):
-    """Writes a dictionary to a JSON file."""
-    try:
-        with open(file_path, 'w') as file:
-            json.dump(data, file, indent=4)
-    except IOError as e:
-        print(f'Error writing to {file_path}: {e}')
-
-
-def get_current_timestamp():
-    """Returns the current timestamp in ISO format."""
-    return datetime.now().isoformat()
-
-
-def filter_data_by_key(data, key):
-    """Filters a list of dictionaries based on a provided key."""
-    if not isinstance(data, list):
-        return []
-    return [item for item in data if key in item]
-
-
-def transform_data(data, transform_func):
-    """Applies a transformation function to each item in a list."""
-    if not isinstance(data, list):
-        return []
-    return [transform_func(item) for item in data]
+# Example of usage for the automation tool
+if __name__ == "__main__":
+    # Load the configuration
+    current_config = load_config("roblox_config.json")
+    print("Loaded Roblox automation config:")
+    print(json.dumps(current_config, indent=2))
