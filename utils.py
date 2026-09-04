@@ -1,68 +1,31 @@
-import json
-import os
-from typing import Any, Dict
+import time
+import random
+import pyautogui
 
-DEFAULT_CONFIG: Dict[str, Any] = {
-    "roblox_settings": {
-        "username": "default_user",
-        "place_id": 123456789,
-        "server_join_delay": 5.0,
-        "action_delay": 1.5,
-        "max_retries": 5,
-        "use_proxy": False
-    },
-    "tool_settings": {
-        "log_to_file": True,
-        "log_level": "DEBUG",
-        "auto_save": True,
-        "max_runtime_minutes": 60
-    }
-}
+def sleep_random(min_sec: float = 1.0, max_sec: float = 3.0):
+    """Pauses execution for a random duration to mimic human behavior."""
+    time.sleep(random.uniform(min_sec, max_sec))
 
-def load_config(config_path: str = "config.json") -> Dict[str, Any]:
-    """Load configuration merging file data with defaults.
-    If file does not exist, create it with defaults.
-    """
-    config = DEFAULT_CONFIG.copy()
-    if os.path.isfile(config_path):
-        try:
-            with open(config_path, "r", encoding="utf-8") as config_file:
-                user_config = json.load(config_file)
-            # Merge user config into defaults, handling nested dicts
-            def merge_dicts(base: Dict, update: Dict) -> Dict:
-                for key, value in update.items():
-                    if key in base and isinstance(base[key], dict) and isinstance(value, dict):
-                        base[key] = merge_dicts(base[key], value)
-                    else:
-                        base[key] = value
-                return base
-            config = merge_dicts(config, user_config)
-        except (json.JSONDecodeError, IOError, OSError) as error:
-            print(f"Warning: Could not load {config_path}: {error}")
-            print("Using default configuration.")
-    else:
-        try:
-            with open(config_path, "w", encoding="utf-8") as config_file:
-                json.dump(DEFAULT_CONFIG, config_file, indent=4)
-            print(f"Default configuration created at {config_path}")
-        except (IOError, OSError) as error:
-            print(f"Warning: Could not create {config_path}: {error}")
-    return config
+def click_at_element(x: int, y: int, confidence: float = 0.9):
+    """Performs a mouse click at specific coordinates."""
+    pyautogui.moveTo(x, y, duration=0.2)
+    pyautogui.click()
 
-# Additional helper to save config
-def save_config(config: Dict[str, Any], config_path: str = "config.json") -> bool:
-    """Save the current config to file, overwriting if exists."""
-    try:
-        with open(config_path, "w", encoding="utf-8") as config_file:
-            json.dump(config, config_file, indent=4)
-        return True
-    except (IOError, OSError) as error:
-        print(f"Error saving config: {error}")
-        return False
+def get_screen_center():
+    """Calculates screen center for game interactions."""
+    width, height = pyautogui.size()
+    return width // 2, height // 2
 
-# Example of usage for the automation tool
-if __name__ == "__main__":
-    # Load the configuration
-    current_config = load_config("roblox_config.json")
-    print("Loaded Roblox automation config:")
-    print(json.dumps(current_config, indent=2))
+def type_chat_message(message: str):
+    """Types and sends a message in the Roblox chat."""
+    pyautogui.press('/')
+    sleep_random(0.1, 0.2)
+    pyautogui.write(message, interval=0.05)
+    pyautogui.press('enter')
+
+def ensure_window_focus(window_title: str = "Roblox"):
+    """Brings the specified application window to the foreground."""
+    import pygetwindow as gw
+    windows = gw.getWindowsWithTitle(window_title)
+    if windows:
+        windows[0].activate()
