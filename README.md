@@ -1,16 +1,17 @@
 # automation-tool-25
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-
-automation-tool-25 is a Python toolkit for automating Roblox platform operations. It enables developers to programmatically manage games, retrieve analytics, and handle administrative tasks through reliable API interfaces.
+`automation-tool-25` is a high-performance Python framework designed for automating repetitive tasks within the Roblox ecosystem. It leverages memory-efficient polling and low-latency interaction logic to streamline workflow efficiency for developers and power users.
 
 ## Features
-- API wrappers for updating game descriptions, thumbnails, and server settings using Universe IDs
-- Automated collection of player metrics and experience data with CSV and JSON export support
-- Bulk group management including member roles, shouts, and wall posts
-- Built-in task scheduler for recurring jobs with automatic retry and logging
+
+*   **Task Scheduling:** Execute complex sequences of actions with millisecond precision using the integrated task scheduler.
+*   **API-First Design:** Direct interaction with Roblox-based endpoints using abstracted session management to prevent session timeouts.
+*   **Robust Error Handling:** Built-in auto-retry mechanisms for network-related interrupts and API rate-limiting blocks.
+*   **Lightweight Footprint:** Developed with zero external dependencies beyond `requests` and `httpx`, ensuring high execution speed.
 
 ## Installation
+
+Ensure you have Python 3.9+ installed. Clone the repository and install the required modules:
 
 ```bash
 git clone https://github.com/Developer/automation-tool-25.git
@@ -20,15 +21,20 @@ pip install -r requirements.txt
 
 ## Usage
 
+Configure your `config.json` with your credentials, then execute the main engine script:
+
 ```python
-from automation_tool_25 import Client
+from automation import TaskEngine
 
-client = Client(cookie="YOUR_ROBLOSECURITY_COOKIE")
+# Initialize the engine with custom configuration
+engine = TaskEngine(config_path="config.json")
 
-# Update game description
-client.set_game_description(universe_id=1234567890, description="Major update released.")
-
-# Get live player count
-count = client.get_player_count(place_id=9876543210)
-print(f"Players online: {count}")
+# Execute a sequence of automated operations
+engine.run(sequence="daily_cleanup")
 ```
+
+## License
+
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
