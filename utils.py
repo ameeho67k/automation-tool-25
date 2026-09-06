@@ -1,31 +1,45 @@
+import functools
 import time
-import random
-import pyautogui
+import logging
+from typing import Callable, Any
 
-def sleep_random(min_sec: float = 1.0, max_sec: float = 3.0):
-    """Pauses execution for a random duration to mimic human behavior."""
-    time.sleep(random.uniform(min_sec, max_sec))
+# Configure logger for performance metrics
+logger = logging.getLogger('automation-tool-25')
 
-def click_at_element(x: int, y: int, confidence: float = 0.9):
-    """Performs a mouse click at specific coordinates."""
-    pyautogui.moveTo(x, y, duration=0.2)
-    pyautogui.click()
+def memoize_with_ttl(ttl_seconds: int = 300):
+    """Cache function results with time-to-live to reduce overhead."""
+    def decorator(func: Callable):
+        cache = {}
+        
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            key = (args, frozenset(kwargs.items()))
+            current_time = time.time()
+            
+            if key in cache:
+                result, timestamp = cache[key]
+                if current_time - timestamp < ttl_seconds:
+                    return result
+            
+            result = func(*args, **kwargs)
+            cache[key] = (result, current_time)
+            return result
+        return wrapper
+    return decorator
 
-def get_screen_center():
-    """Calculates screen center for game interactions."""
-    width, height = pyautogui.size()
-    return width // 2, height // 2
+def batch_process_entities(data: list, batch_size: int = 50):
+    """Generator to process large roblox entity batches efficiently."""
+    for i in range(0, len(data), batch_size):
+        yield data[i:i + batch_size]
 
-def type_chat_message(message: str):
-    """Types and sends a message in the Roblox chat."""
-    pyautogui.press('/')
-    sleep_random(0.1, 0.2)
-    pyautogui.write(message, interval=0.05)
-    pyautogui.press('enter')
-
-def ensure_window_focus(window_title: str = "Roblox"):
-    """Brings the specified application window to the foreground."""
-    import pygetwindow as gw
-    windows = gw.getWindowsWithTitle(window_title)
-    if windows:
-        windows[0].activate()
+def performance_timer(func: Callable):
+    """Decorator to log execution duration of core methods."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        duration = time.perf_counter() - start
+        if duration > 0.1:
+            logger.debug(f"Method {func.__name__} took {duration:.4f}s")
+        return result
+    return wrapper
