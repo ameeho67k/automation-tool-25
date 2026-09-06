@@ -1,33 +1,28 @@
 import time
-from typing import List
+import random
 
-class PerformanceOptimizer:
-    def __init__(self):
-        self.execution_times = []
+def get_roblox_headers(csrf_token: str = ""):
+    """Constructs standard headers for Roblox API requests."""
+    return {
+        "User-Agent": "Roblox/WinInet",
+        "X-CSRF-TOKEN": csrf_token,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
 
-    def time_function(self, func):
-        def wrapper(*args, **kwargs):
-            start_time = time.time()
-            result = func(*args, **kwargs)
-            elapsed_time = time.time() - start_time
-            self.execution_times.append(elapsed_time)
-            print(f"Function '{func.__name__}' executed in {elapsed_time:.4f} seconds.")
-            return result
-        return wrapper
+def simulate_human_delay(min_ms: int = 500, max_ms: int = 2000):
+    """Sleeps for a random duration to mimic organic behavior."""
+    time.sleep(random.uniform(min_ms, max_ms) / 1000)
 
-    @time_function
-    def process_data(self, data: List[int]) -> List[int]:
-        # Simulating data processing with a simple operation
-        return [x * 2 for x in data]
+def format_place_id(place_id: int) -> str:
+    """Converts raw ID to string format for URL endpoints."""
+    return str(place_id)
 
-    def get_average_time(self) -> float:
-        if not self.execution_times:
-            return 0.0
-        return sum(self.execution_times) / len(self.execution_times)
+def validate_response_status(status_code: int) -> bool:
+    """Checks if a Roblox API response status is successful."""
+    return 200 <= status_code < 300
 
-# Example usage
-optimizer = PerformanceOptimizer()
-data = list(range(1000))
-processed_data = optimizer.process_data(data)
-average_time = optimizer.get_average_time()
-print(f"Average execution time: {average_time:.4f} seconds")
+def batch_process_ids(id_list: list, chunk_size: int = 50):
+    """Splits large ID lists for batch endpoint requests."""
+    for i in range(0, len(id_list), chunk_size):
+        yield id_list[i:i + chunk_size]
