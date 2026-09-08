@@ -1,36 +1,36 @@
-def validate_user_input(user_input):
-    """
-    Validates the user input from Roblox platform.
-    Ensures that the input meets the required criteria.
-    """
-    if not isinstance(user_input, str):
-        raise ValueError("Input must be a string")
-    if len(user_input) < 3 or len(user_input) > 20:
-        raise ValueError("Input length must be between 3 and 20 characters")
-    if not user_input.isalnum():
-        raise ValueError("Input must only contain alphanumeric characters")
-    return True
+import re
 
+class AutomationValidator:
+    """Handles input sanitization for Roblox automation routines."""
 
-def validate_game_id(game_id):
-    """
-    Validates the game ID to ensure it's a valid format.
-    """
-    if not isinstance(game_id, int):
-        raise ValueError("Game ID must be an integer")
-    if game_id <= 0:
-        raise ValueError("Game ID must be a positive integer")
-    return True
+    @staticmethod
+    def validate_user_id(user_id: str) -> bool:
+        """Checks if Roblox user ID is numeric and non-empty."""
+        return bool(re.fullmatch(r'\d+', str(user_id)))
 
+    @staticmethod
+    def validate_place_id(place_id: str) -> bool:
+        """Checks if place ID is a valid numeric format."""
+        return bool(re.fullmatch(r'\d+', str(place_id)))
 
-def validate_username(username):
-    """
-    Validates the username against Roblox standards.
-    """
-    if not isinstance(username, str):
-        raise ValueError("Username must be a string")
-    if len(username) < 3 or len(username) > 20:
-        raise ValueError("Username length must be between 3 and 20 characters")
-    if not username[0].isalpha():
-        raise ValueError("Username must start with a letter")
-    return True
+    @staticmethod
+    def validate_config_key(key: str) -> bool:
+        """Ensures configuration keys follow snake_case convention."""
+        return bool(re.fullmatch(r'[a-z_][a-z0-9_]*', key))
+
+    @classmethod
+    def validate_payload(cls, data: dict) -> bool:
+        """Validates dictionary payloads for processing."""
+        required = ['user_id', 'place_id']
+        if not all(k in data for k in required):
+            return False
+        
+        return (
+            cls.validate_user_id(str(data['user_id'])) and
+            cls.validate_place_id(str(data['place_id']))
+        )
+
+    @staticmethod
+    def sanitize_input(value: str) -> str:
+        """Strips illegal characters from raw input strings."""
+        return re.sub(r'[^a-zA-Z0-9_\-\s]', '', value).strip()
