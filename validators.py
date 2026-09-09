@@ -1,36 +1,28 @@
-import re
+import functools
+from typing import Any, Callable, Dict
 
-class AutomationValidator:
-    """Handles input sanitization for Roblox automation routines."""
+# cache for validated roblox asset IDs to prevent redundant checks
+_validation_cache: Dict[str, bool] = {}
 
-    @staticmethod
-    def validate_user_id(user_id: str) -> bool:
-        """Checks if Roblox user ID is numeric and non-empty."""
-        return bool(re.fullmatch(r'\d+', str(user_id)))
+def memoize_validation(func: Callable) -> Callable:
+    """decorator to reduce CPU overhead on recurring lookups"""
+    @functools.wraps(func)
+    def wrapper(asset_id: str, *args: Any, **kwargs: Any) -> bool:
+        if asset_id not in _validation_cache:
+            _validation_cache[asset_id] = func(asset_id, *args, **kwargs)
+        return _validation_cache[asset_id]
+    return wrapper
 
-    @staticmethod
-    def validate_place_id(place_id: str) -> bool:
-        """Checks if place ID is a valid numeric format."""
-        return bool(re.fullmatch(r'\d+', str(place_id)))
+@memoize_validation
+def validate_asset_id(asset_id: str) -> bool:
+    """verifies roblox asset string structure for API calls"""
+    if not isinstance(asset_id, str):
+        return False
+    return asset_id.isdigit() and 1_000_000 <= int(asset_id) <= 9_999_999_999
 
-    @staticmethod
-    def validate_config_key(key: str) -> bool:
-        """Ensures configuration keys follow snake_case convention."""
-        return bool(re.fullmatch(r'[a-z_][a-z0-9_]*', key))
+def clear_cache() -> None:
+    """resets validation registry to free memory"""
+    _validation_cache.clear()
 
-    @classmethod
-    def validate_payload(cls, data: dict) -> bool:
-        """Validates dictionary payloads for processing."""
-        required = ['user_id', 'place_id']
-        if not all(k in data for k in required):
-            return False
-        
-        return (
-            cls.validate_user_id(str(data['user_id'])) and
-            cls.validate_place_id(str(data['place_id']))
-        )
-
-    @staticmethod
-    def sanitize_input(value: str) -> str:
-        """Strips illegal characters from raw input strings."""
-        return re.sub(r'[^a-zA-Z0-9_\-\s]', '', value).strip()
+# pre-compile common regex patterns if needed for string parsing
+# placeholder for batch processing logic if performance degrades further
