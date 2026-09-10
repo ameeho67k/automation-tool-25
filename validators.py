@@ -1,28 +1,40 @@
-import functools
-from typing import Any, Callable, Dict
+class ValidationError(Exception):
+    """Custom exception for automation data issues."""
+    pass
 
-# cache for validated roblox asset IDs to prevent redundant checks
-_validation_cache: Dict[str, bool] = {}
+def validate_roblox_input(data: dict):
+    """
+    Validates input schema for automation processing.
+    Ensures required fields exist and types are correct.
+    """
+    required_fields = {'user_id', 'action_type', 'delay'}
+    
+    # Check for missing keys
+    if not all(field in data for field in required_fields):
+        raise ValidationError(f"Missing required fields: {required_fields}")
 
-def memoize_validation(func: Callable) -> Callable:
-    """decorator to reduce CPU overhead on recurring lookups"""
-    @functools.wraps(func)
-    def wrapper(asset_id: str, *args: Any, **kwargs: Any) -> bool:
-        if asset_id not in _validation_cache:
-            _validation_cache[asset_id] = func(asset_id, *args, **kwargs)
-        return _validation_cache[asset_id]
-    return wrapper
+    # Validate user_id format
+    if not isinstance(data['user_id'], int) or data['user_id'] <= 0:
+        raise ValidationError("Invalid user_id: must be a positive integer")
 
-@memoize_validation
-def validate_asset_id(asset_id: str) -> bool:
-    """verifies roblox asset string structure for API calls"""
-    if not isinstance(asset_id, str):
+    # Validate action_type against allowed list
+    allowed_actions = {'trade', 'friend', 'purchase'}
+    if data['action_type'] not in allowed_actions:
+        raise ValidationError(f"Unsupported action: {data['action_type']}")
+
+    # Validate delay constraints
+    if not isinstance(data['delay'], (int, float)) or data['delay'] < 0:
+        raise ValidationError("Invalid delay: must be a non-negative number")
+
+    return True
+
+def process_safe(data: dict):
+    """
+    Wrapper for processing validated inputs.
+    """
+    try:
+        if validate_roblox_input(data):
+            return True
+    except ValidationError as e:
         return False
-    return asset_id.isdigit() and 1_000_000 <= int(asset_id) <= 9_999_999_999
-
-def clear_cache() -> None:
-    """resets validation registry to free memory"""
-    _validation_cache.clear()
-
-# pre-compile common regex patterns if needed for string parsing
-# placeholder for batch processing logic if performance degrades further
+    return False
