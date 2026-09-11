@@ -3,33 +3,38 @@ import os
 from typing import Any, Dict
 
 DEFAULT_CONFIG = {
-    "robux_threshold": 100,
-    "auto_retry": True,
-    "log_level": "INFO",
-    "target_game_id": None
+    "roblox_api_key": "",
+    "target_game_id": 0,
+    "polling_interval": 30,
+    "log_level": "INFO"
 }
 
-def load_config(filepath: str = "config.json") -> Dict[str, Any]:
-    """
-    Loads configuration from json file, merging with defaults.
-    """
-    config = DEFAULT_CONFIG.copy()
+class ConfigLoader:
+    def __init__(self, config_path: str = "config.json"):
+        self.config_path = config_path
+        self.config = DEFAULT_CONFIG.copy()
+        self._load_config()
 
-    if not os.path.exists(filepath):
-        return config
+    def _load_config(self) -> None:
+        """Loads configuration from disk or creates default if missing."""
+        if not os.path.exists(self.config_path):
+            self._save_defaults()
+            return
 
-    try:
-        with open(filepath, "r") as f:
-            user_config = json.load(f)
-            config.update(user_config)
-    except (json.JSONDecodeError, IOError):
-        pass
+        try:
+            with open(self.config_path, "r") as f:
+                loaded_data = json.load(f)
+                self.config.update(loaded_data)
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Config load error: {e}, using defaults")
 
-    return config
+    def _save_defaults(self) -> None:
+        """Writes initial configuration file."""
+        try:
+            with open(self.config_path, "w") as f:
+                json.dump(self.config, f, indent=4)
+        except IOError as e:
+            print(f"Failed to write default config: {e}")
 
-def save_config(config: Dict[str, Any], filepath: str = "config.json") -> None:
-    """
-    Persists current configuration to disk.
-    """
-    with open(filepath, "w") as f:
-        json.dump(config, f, indent=4)
+    def get(self, key: str) -> Any:
+        return self.config.get(key, DEFAULT_CONFIG.get(key))
