@@ -1,18 +1,17 @@
-import functools
 import time
-from typing import Any, Callable, Dict
+import functools
+from typing import Callable, Any
 
-# Cache for frequently accessed roblox endpoint data
-_cache: Dict[str, Any] = {}
+# cache for roblox api request results
+_cache = {}
 
-def memoize_data(ttl: int = 300) -> Callable:
-    """Decorator to cache results of expensive network calls."""
-    def decorator(func: Callable) -> Callable:
+def memoize_request(ttl: int = 300):
+    """decorator for caching api calls to reduce latency"""
+    def decorator(func: Callable):
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args, **kwargs):
             key = f"{func.__name__}:{args}:{kwargs}"
             now = time.time()
-            
             if key in _cache:
                 data, timestamp = _cache[key]
                 if now - timestamp < ttl:
@@ -25,25 +24,19 @@ def memoize_data(ttl: int = 300) -> Callable:
     return decorator
 
 class RobloxHandler:
-    """Handles core interaction logic with optimization layers."""
-    
     def __init__(self, session_id: str):
         self.session_id = session_id
 
-    @memoize_data(ttl=60)
-    def get_place_metadata(self, place_id: int) -> Dict[str, Any]:
-        """Fetches and caches place information to reduce latency."""
-        # Simulating external network request
-        return {
-            "place_id": place_id,
-            "status": "active",
-            "timestamp": time.time()
-        }
+    @memoize_request(ttl=60)
+    def get_player_data(self, user_id: int) -> dict:
+        """fetch player metadata with local caching"""
+        # simulate network request delay
+        time.sleep(0.1)
+        return {"id": user_id, "status": "online", "place": "lobby"}
 
-    def batch_process_entities(self, entity_ids: list) -> list:
-        """Efficiently process entities using list comprehension."""
-        return [self.get_place_metadata(eid) for eid in entity_ids]
-
-if __name__ == "__main__":
-    handler = RobloxHandler(session_id="default_session")
-    data = handler.get_place_metadata(123456)
+    def batch_process_users(self, user_ids: list[int]) -> list[dict]:
+        """optimized batch processing for player data"""
+        results = []
+        for uid in user_ids:
+            results.append(self.get_player_data(uid))
+        return results
