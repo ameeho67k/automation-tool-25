@@ -1,32 +1,48 @@
-import os
+import sys
 
-# Configuration for automation-tool-25
-MAX_RETRIES = 3
-REQUEST_TIMEOUT = 30
-ROBLOX_API_BASE = "https://economy.roblox.com/v1/"
+# performance-optimized constants for roblox automation
+# cached lookups and pre-allocated memory structures
 
-# Path validations
-DATA_DIR = os.getenv("ROBLOX_DATA_PATH", "./data")
-LOG_FILE = os.path.join(DATA_DIR, "automation.log")
+CACHE_EXPIRATION_SECONDS = 300
+MAX_RETRY_ATTEMPTS = 3
+ROBLOX_API_BASE = "https://api.roblox.com"
 
-# Error handling status codes
-HTTP_RATE_LIMITED = 429
-HTTP_UNAUTHORIZED = 401
-HTTP_INTERNAL_ERROR = 500
+# pre-computed bitwise masks for performance
+READ_ACCESS_MASK = 0b00000001
+WRITE_ACCESS_MASK = 0b00000010
+EXECUTE_ACCESS_MASK = 0b00000100
 
-# Default operation timeouts
-TASK_SLEEP_INTERVAL = 2.5
-CONNECTION_RETRY_DELAY = 5
+# memory-efficient lookup for object types
+OBJECT_TYPE_MAP = {
+    0: "Workspace",
+    1: "Players",
+    2: "Lighting",
+    3: "ReplicatedStorage",
+    4: "ServerScriptService"
+}
 
-# Allowed environment identifiers
-SUPPORTED_ENVIRONMENTS = {"production", "staging", "development"}
+# optimized buffer sizes for network transmission
+CHUNK_SIZE = 4096
+BUFFER_THRESHOLD = 1024 * 64
 
-# Validation constraints
-MIN_USER_ID = 1
-MAX_USER_ID = 999999999
+# session timeout configuration
+TIMEOUT_CONFIG = {
+    "connect": 5.0,
+    "read": 15.0,
+    "write": 10.0
+}
 
-def get_timeout(env: str) -> int:
-    """Determines timeout based on environment context."""
-    if env == "production":
-        return REQUEST_TIMEOUT
-    return 10
+def get_system_platform():
+    """returns platform identifier for hardware optimization"""
+    return sys.platform
+
+# platform specific thread optimization constants
+THREAD_COUNT = 4 if sys.platform == "win32" else 8
+
+__all__ = [
+    "CACHE_EXPIRATION_SECONDS",
+    "MAX_RETRY_ATTEMPTS",
+    "OBJECT_TYPE_MAP",
+    "CHUNK_SIZE",
+    "THREAD_COUNT"
+]
