@@ -1,40 +1,41 @@
-class ValidationError(Exception):
-    """Custom exception for automation data issues."""
-    pass
+import time
+import functools
+import logging
 
-def validate_roblox_input(data: dict):
+# Logger for network retry activity
+logger = logging.getLogger('automation-tool-25')
+
+def retry_network_operation(max_retries=3, delay=2, backoff=2):
     """
-    Validates input schema for automation processing.
-    Ensures required fields exist and types are correct.
+    Decorator to retry network-dependent operations with exponential backoff.
+    Designed for roblox api calls that may face intermittent timeouts.
     """
-    required_fields = {'user_id', 'action_type', 'delay'}
-    
-    # Check for missing keys
-    if not all(field in data for field in required_fields):
-        raise ValidationError(f"Missing required fields: {required_fields}")
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            current_delay = delay
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except (ConnectionError, TimeoutError) as e:
+                    if attempt == max_retries - 1:
+                        logger.error(f"Final attempt failed for {func.__name__}: {e}")
+                        raise
+                    
+                    logger.warning(f"Attempt {attempt + 1} failed, retrying in {current_delay}s...")
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+            return None
+        return wrapper
+    return decorator
 
-    # Validate user_id format
-    if not isinstance(data['user_id'], int) or data['user_id'] <= 0:
-        raise ValidationError("Invalid user_id: must be a positive integer")
-
-    # Validate action_type against allowed list
-    allowed_actions = {'trade', 'friend', 'purchase'}
-    if data['action_type'] not in allowed_actions:
-        raise ValidationError(f"Unsupported action: {data['action_type']}")
-
-    # Validate delay constraints
-    if not isinstance(data['delay'], (int, float)) or data['delay'] < 0:
-        raise ValidationError("Invalid delay: must be a non-negative number")
-
+@retry_network_operation(max_retries=3)
+def validate_roblox_connection(endpoint: str):
+    """
+    Verifies connectivity to a specific roblox api endpoint.
+    """
+    # Simulating a network request that could fail
+    import random
+    if random.random() < 0.7:
+        raise ConnectionError("Failed to connect to Roblox API")
     return True
-
-def process_safe(data: dict):
-    """
-    Wrapper for processing validated inputs.
-    """
-    try:
-        if validate_roblox_input(data):
-            return True
-    except ValidationError as e:
-        return False
-    return False
