@@ -1,37 +1,52 @@
-from typing import List, Dict, Optional
-import time
+import asyncio
+from typing import Dict, List, Any, Optional
+import aiohttp
 
-class RobloxAutomationClient:
-    """Handles core automation tasks for Roblox interactions."""
+class RobloxBatchProcessor:
+    """Optimized processor for handling concurrent Roblox API requests with caching."""
+    
+    def __init__(self, concurrency_limit: int = 10, cache_ttl: int = 60):
+        self.semaphore = asyncio.Semaphore(concurrency_limit)
+        self.cache: Dict[str, tuple] = {}  # Format: {url: (data, timestamp)}
+        self.cache_ttl = cache_ttl
 
-    def __init__(self, session_id: str, timeout: int = 30) -> None:
-        self.session_id: str = session_id
-        self.timeout: int = timeout
-        self.is_active: bool = False
+    async def _fetch_url(self, session: aiohttp.ClientSession, url: str) -> Optional[Dict[str, Any]]:
+        # Check cache and TTL before making network calls
+        current_time = asyncio.get_event_loop().time()
+        if url in self.cache:
+            cached_data, timestamp = self.cache[url]
+            if current_time - timestamp < self.cache_ttl:
+                return cached_data
 
-    def execute_script(self, script_content: str, target_id: int) -> bool:
-        """Executes a Lua script against a specific Roblox instance."""
-        if not script_content:
-            return False
+        async with self.semaphore:
+            try:
+                async with session.get(url, timeout=10) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        self.cache[url] = (data, asyncio.get_event_loop().time())
+                        return data
+            except Exception:
+                # Gracefully handle network exceptions to avoid process termination
+                pass
+        return None
+
+    async def fetch_users_data(self, user_ids: List[int]) -> List[Optional[Dict[str, Any]]]:
+        """Concurrently fetches user profile details from Roblox API."""
+        if not user_ids:
+            return []
+
+        urls = [f"https://users.roblox.com/v1/users/{user_id}" for user_id in user_ids]
         
-        print(f"Executing script on instance {target_id}...")
-        # Simulated execution logic
-        time.sleep(0.5)
-        return True
+        async with aiohttp.ClientSession() as session:
+            tasks = [self._fetch_url(session, url) for url in urls]
+            return await asyncio.gather(*tasks)
 
-    def get_server_status(self, game_id: str) -> Dict[str, any]:
-        """Fetches the current server status for a given game ID."""
-        return {
-            "game_id": game_id,
-            "status": "online",
-            "player_count": 12,
-            "timestamp": time.time()
-        }
-
-    def batch_process_instances(self, instance_ids: List[int]) -> List[bool]:
-        """Processes multiple server instances in a single batch."""
-        results: List[bool] = []
-        for instance_id in instance_ids:
-            success = self.execute_script("print('ping')", instance_id)
-            results.append(success)
-        return results
+    def clear_expired_cache(self) -> None:
+        """Prunes expired entries from the in-memory cache to manage memory footprint."""
+        current_time = asyncio.get_event_loop().time()
+        expired_keys = [
+            url for url, (_, timestamp) in self.cache.items()
+            if current_time - timestamp >= self.cache_ttl
+        ]
+        for url in expired_keys:
+            del self.cache[url]
