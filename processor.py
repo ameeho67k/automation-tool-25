@@ -1,45 +1,50 @@
-import json
-import os
-from typing import Any, Dict
+import asyncio
+import time
+from typing import List, Any, Callable, Optional
 
-DEFAULTS = {
-    "roblox_api_key": "",
-    "target_game": "",
-    "delay_seconds": 1.0,
-    "retry_count": 3,
-    "headless_mode": True,
-    "log_to_file": False,
-    "max_runtime_minutes": 60
-}
 
-def load_configuration(config_path: str = "config.json") -> Dict[str, Any]:
-    """Load config from JSON file with defaults fallback."""
-    config = DEFAULTS.copy()
-    
-    if os.path.isfile(config_path):
-        try:
-            with open(config_path, "r", encoding="utf-8") as file:
-                loaded = json.load(file)
-            for key in DEFAULTS:
-                if key in loaded:
-                    config[key] = loaded[key]
-        except (json.JSONDecodeError, IOError) as error:
-            print(f"Config load error: {error}. Using defaults.")
-    
-    return config
+class BatchProcessor:
+    """Optimizes API and data processing by grouping items into dynamic batches."""
 
-def apply_defaults(user_config: Dict[str, Any]) -> Dict[str, Any]:
-    """Merge user config with defaults."""
-    result = DEFAULTS.copy()
-    result.update({k: v for k, v in user_config.items() if k in DEFAULTS})
-    return result
+    def __init__(self, batch_size: int = 50, flush_interval: float = 0.2):
+        self.batch_size = batch_size
+        self.flush_interval = flush_interval
+        self.queue: asyncio.Queue = asyncio.Queue()
+        self._worker_task: Optional[asyncio.Task] = None
 
-def process_config(config_path: str = "config.json") -> Dict[str, Any]:
-    """Main entry to load and process config with defaults."""
-    raw_config = load_configuration(config_path)
-    return apply_defaults(raw_config)
+    async def start(self, process_callback: Callable[[List[Any]], Any]):
+        """Starts the background worker task to process queued items."""
+        self._worker_task = asyncio.create_task(self._worker(process_callback))
 
-if __name__ == "__main__":
-    config = process_config()
-    print("Processed config keys:", list(config.keys()))
-    print("Sample delay:", config["delay_seconds"])
+    async def add_item(self, item: Any):
+        """Adds a single item to the queue for batch processing."""
+        await self.queue.put(item)
+
+    async def _worker(self, process_callback: Callable[[List[Any]], Any]):
+        while True:
+            batch = []
+            start_time = time.time()
+
+            while len(batch) < self.batch_size:
+                elapsed = time.time() - start_time
+                remaining_time = self.flush_interval - elapsed
+                if remaining_time <= 0:
+                    break
+                try:
+                    item = await asyncio.wait_for(self.queue.get(), timeout=max(remaining_time, 0.001))
+                    batch.append(item)
+                    self.queue.task_done()
+                except asyncio.TimeoutError:
+                    break
+
+            if batch:
+                try:
+                    await process_callback(batch)
+                except Exception as err:
+                    print(f"Batch processing error: {err}")
+
+    async def stop(self):
+        """Gracefully flushes remaining items and stops the background worker."""
+        if self._worker_task:
+            await self.queue.join()
+            self._worker_task.cancel()
