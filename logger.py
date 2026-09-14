@@ -1,54 +1,38 @@
 import logging
-from logging.handlers import RotatingFileHandler
 import os
+from logging.handlers import RotatingFileHandler
 
-def setup_logger(name: str = "automation_tool_25", log_file: str = "automation.log", level: int = logging.INFO) -> logging.Logger:
+def setup_logger(name: str, log_file: str = "automation.log", level: int = logging.INFO):
+    """Configures a rotating file logger for Roblox automation tasks."""
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    # Prevent duplicate handlers if called multiple times
-    if logger.hasHandlers():
-        return logger
-
     # Ensure logs directory exists
-    log_dir = "logs"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    if not os.path.exists("logs"):
+        os.makedirs("logs")
 
-    log_path = os.path.join(log_dir, log_file)
+    file_path = os.path.join("logs", log_file)
 
-    # RotatingFileHandler for log rotation
-    # maxBytes=1MB, backupCount=5
-    file_handler = RotatingFileHandler(
-        log_path, maxBytes=1024*1024, backupCount=5
+    # Rotation: 5MB per file, keep 3 backups
+    handler = RotatingFileHandler(
+        file_path, 
+        maxBytes=5 * 1024 * 1024, 
+        backupCount=3
     )
 
-    file_handler.setLevel(level)
-
-    # StreamHandler for console output
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
-
-    # Standard formatter
+    # Set formatting for console and file
     formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
     )
+    handler.setFormatter(formatter)
 
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    # Prevent duplicate handlers if re-initialized
+    if not logger.handlers:
+        logger.addHandler(handler)
+        
+        # Add console output for development visibility
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
 
     return logger
-
-# Test if run directly
-if __name__ == "__main__":
-    logger = setup_logger()
-    logger.info("Logger setup complete with rotation enabled")
-    logger.debug("Debug message for testing")
-    logger.warning("Sample warning log")
-
-    # Generate logs to demonstrate rotation
-    for i in range(50):
-        logger.info("Test log entry number %d for rotation demo", i)
