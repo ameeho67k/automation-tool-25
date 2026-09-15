@@ -1,33 +1,29 @@
 import logging
 import sys
-from typing import Optional
+from functools import lru_cache
 
-class RobloxLogger:
-    """Handles standardized logging for automation-tool-25."""
-    
-    def __init__(self, name: str, level: int = logging.INFO) -> None:
-        self.logger: logging.Logger = logging.getLogger(name)
-        self.logger.setLevel(level)
-        
-        handler: logging.StreamHandler = logging.StreamHandler(sys.stdout)
-        formatter: logging.Formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+@lru_cache(maxsize=128)
+def get_logger(name: str) -> logging.Logger:
+    """Creates and configures a cached logger instance."""
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter(
+            '[%(asctime)s] [%(name)s] [%(levelname)s] - %(message)s'
         )
         handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+    return logger
 
-    def info(self, message: str) -> None:
-        """Logs informational messages."""
-        self.logger.info(message)
-
-    def error(self, message: str, exc_info: Optional[bool] = False) -> None:
-        """Logs error events and optional tracebacks."""
-        self.logger.error(message, exc_info=exc_info)
-
-    def warning(self, message: str) -> None:
-        """Logs warning events for process monitoring."""
-        self.logger.warning(message)
-
-def get_logger(name: str) -> RobloxLogger:
-    """Factory function for creating module-specific loggers."""
-    return RobloxLogger(name)
+def log_performance(func):
+    """Decorator to track execution duration for optimization."""
+    import time
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        duration = time.perf_counter() - start
+        if duration > 0.1:
+            get_logger('perf').warning(f'{func.__name__} took {duration:.4f}s')
+        return result
+    return wrapper
