@@ -1,38 +1,33 @@
 import logging
-import os
-from logging.handlers import RotatingFileHandler
+import sys
+from typing import Optional
 
-def setup_logger(name: str, log_file: str = "automation.log", level: int = logging.INFO):
-    """Configures a rotating file logger for Roblox automation tasks."""
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-
-    # Ensure logs directory exists
-    if not os.path.exists("logs"):
-        os.makedirs("logs")
-
-    file_path = os.path.join("logs", log_file)
-
-    # Rotation: 5MB per file, keep 3 backups
-    handler = RotatingFileHandler(
-        file_path, 
-        maxBytes=5 * 1024 * 1024, 
-        backupCount=3
-    )
-
-    # Set formatting for console and file
-    formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
-    )
-    handler.setFormatter(formatter)
-
-    # Prevent duplicate handlers if re-initialized
-    if not logger.handlers:
-        logger.addHandler(handler)
+class RobloxLogger:
+    """Handles standardized logging for automation-tool-25."""
+    
+    def __init__(self, name: str, level: int = logging.INFO) -> None:
+        self.logger: logging.Logger = logging.getLogger(name)
+        self.logger.setLevel(level)
         
-        # Add console output for development visibility
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        handler: logging.StreamHandler = logging.StreamHandler(sys.stdout)
+        formatter: logging.Formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
-    return logger
+    def info(self, message: str) -> None:
+        """Logs informational messages."""
+        self.logger.info(message)
+
+    def error(self, message: str, exc_info: Optional[bool] = False) -> None:
+        """Logs error events and optional tracebacks."""
+        self.logger.error(message, exc_info=exc_info)
+
+    def warning(self, message: str) -> None:
+        """Logs warning events for process monitoring."""
+        self.logger.warning(message)
+
+def get_logger(name: str) -> RobloxLogger:
+    """Factory function for creating module-specific loggers."""
+    return RobloxLogger(name)
