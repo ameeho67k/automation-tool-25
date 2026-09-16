@@ -1,41 +1,35 @@
-import time
-import functools
-import logging
+import re
 
-# Logger for network retry activity
-logger = logging.getLogger('automation-tool-25')
+class InputValidator:
+    """
+    Validates incoming roblox asset identifiers and user inputs
+    to prevent malformed processing in automation-tool-25.
+    """
+    
+    ROBLOX_ID_PATTERN = re.compile(r'^\d+$')
+    MAX_NAME_LENGTH = 50
 
-def retry_network_operation(max_retries=3, delay=2, backoff=2):
-    """
-    Decorator to retry network-dependent operations with exponential backoff.
-    Designed for roblox api calls that may face intermittent timeouts.
-    """
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            current_delay = delay
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except (ConnectionError, TimeoutError) as e:
-                    if attempt == max_retries - 1:
-                        logger.error(f"Final attempt failed for {func.__name__}: {e}")
-                        raise
-                    
-                    logger.warning(f"Attempt {attempt + 1} failed, retrying in {current_delay}s...")
-                    time.sleep(current_delay)
-                    current_delay *= backoff
-            return None
-        return wrapper
-    return decorator
+    @staticmethod
+    def validate_asset_id(asset_id: str) -> bool:
+        """Ensure asset_id is a positive integer string."""
+        if not asset_id or not InputValidator.ROBLOX_ID_PATTERN.match(asset_id):
+            return False
+        return int(asset_id) > 0
 
-@retry_network_operation(max_retries=3)
-def validate_roblox_connection(endpoint: str):
-    """
-    Verifies connectivity to a specific roblox api endpoint.
-    """
-    # Simulating a network request that could fail
-    import random
-    if random.random() < 0.7:
-        raise ConnectionError("Failed to connect to Roblox API")
-    return True
+    @staticmethod
+    def validate_task_name(name: str) -> bool:
+        """Verify task name meets naming convention requirements."""
+        if not name or len(name) > InputValidator.MAX_NAME_LENGTH:
+            return False
+        return name.isalnum() or '_' in name
+
+    @classmethod
+    def process_input(cls, asset_id: str, task_name: str):
+        """Main validation gate for processing logic."""
+        if not cls.validate_asset_id(asset_id):
+            raise ValueError(f"Invalid Roblox Asset ID: {asset_id}")
+            
+        if not cls.validate_task_name(task_name):
+            raise ValueError(f"Invalid task name format: {task_name}")
+            
+        return True
