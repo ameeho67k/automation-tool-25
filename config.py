@@ -1,59 +1,52 @@
 import json
-import os
+from pathlib import Path
 from typing import Any, Dict
 
-# Default configuration tailored for Roblox automation tool
 DEFAULT_CONFIG: Dict[str, Any] = {
-    "cookie": "",
-    "group_id": 0,
+    "roblox_cookie": "",
+    "place_id": 0,
     "universe_id": 0,
-    "request_timeout": 10.0,
+    "request_timeout": 15,
     "max_retries": 3,
-    "webhook_url": ""
+    "rate_limit_delay": 1.0,
+    "discord_webhook_url": "",
+    "headless_mode": True,
 }
 
-class ConfigLoader:
-    """Manages configuration loading from JSON and environment variables."""
-    
-    def __init__(self, filepath: str = "config.json"):
-        self.filepath = filepath
-        self.config = DEFAULT_CONFIG.copy()
+class ConfigManager:
+    """Manages application configuration loading with fallback defaults."""
 
-    def load(self) -> Dict[str, Any]:
-        """Loads configuration, merging file data and environment variables with defaults."""
-        if os.path.exists(self.filepath):
-            try:
-                with open(self.filepath, "r", encoding="utf-8") as f:
-                    file_data = json.load(f)
-                    if isinstance(file_data, dict):
-                        # Ensure we only update keys that are valid configurations
-                        for key, value in file_data.items():
-                            if key in self.config:
-                                self.config[key] = value
-            except (json.JSONDecodeError, IOError):
-                # Gracefully fall back to defaults or env variables if file reading fails
-                pass
+    def __init__(self, config_path: str = "config.json") -> None:
+        self.config_path = Path(config_path)
+        self.config: Dict[str, Any] = self.load_config()
 
-        # Override config using environment variables (e.g. ROBLOX_COOKIE)
-        for key in self.config.keys():
-            env_key = f"ROBLOX_{key.upper()}"
-            env_val = os.getenv(env_key)
-            if env_val is not None:
-                default_type = type(DEFAULT_CONFIG[key])
-                try:
-                    if default_type is bool:
-                        self.config[key] = env_val.lower() in ("true", "1", "yes")
-                    else:
-                        self.config[key] = default_type(env_val)
-                except ValueError:
-                    pass
+    def load_config(self) -> Dict[str, Any]:
+        """Loads configuration from file or creates default configuration if missing."""
+        config = DEFAULT_CONFIG.copy()
 
-        return self.config
+        if not self.config_path.exists():
+            self.save_config(config)
+            return config
 
-    def save(self) -> None:
-        """Saves the current configuration back to the file."""
         try:
-            with open(self.filepath, "w", encoding="utf-8") as f:
-                json.dump(self.config, f, indent=4)
-        except IOError as e:
-            raise RuntimeError(f"Failed to write configuration file: {e}")
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                user_config = json.load(f)
+                if isinstance(user_config, dict):
+                    config.update(user_config)
+        except (json.JSONDecodeError, OSError) as err:
+            print(f"[Warning] Failed to load {self.config_path}: {err}. Using defaults.")
+
+        return config
+
+    def save_config(self, data: Dict[str, Any] = None) -> None:
+        """Saves current configuration to file."""
+        to_save = data if data is not None else self.config
+        try:
+            with open(self.config_path, "w", encoding="utf-8") as f:
+                json.dump(to_save, f, indent=4)
+        except OSError as err:
+            print(f"[Error] Could not save config file: {err}")
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Retrieves a configuration value by key."""
+        return self.config.get(key, default)
