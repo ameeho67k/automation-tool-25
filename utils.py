@@ -1,45 +1,43 @@
-import functools
 import time
 import logging
-from typing import Callable, Any
+from functools import wraps
+from typing import Callable, Any, Tuple, Type
 
-# Configure logger for performance metrics
-logger = logging.getLogger('automation-tool-25')
+logger = logging.getLogger("roblox_automation")
 
-def memoize_with_ttl(ttl_seconds: int = 300):
-    """Cache function results with time-to-live to reduce overhead."""
-    def decorator(func: Callable):
-        cache = {}
-        
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            key = (args, frozenset(kwargs.items()))
-            current_time = time.time()
-            
-            if key in cache:
-                result, timestamp = cache[key]
-                if current_time - timestamp < ttl_seconds:
-                    return result
-            
-            result = func(*args, **kwargs)
-            cache[key] = (result, current_time)
-            return result
+
+def network_retry(
+    max_retries: int = 4,
+    backoff_factor: float = 2.0,
+    retry_exceptions: Tuple[Type[BaseException], ...] = (Exception,)
+) -> Callable:
+    """Decorator to retry Roblox API network requests using exponential backoff."""
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            retries = 0
+            delay = 1.0
+
+            while retries <= max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except retry_exceptions as err:
+                    retries += 1
+                    if retries > max_retries:
+                        logger.error(
+                            f"Operation '{func.__name__}' failed after {max_retries} retries. Error: {err}"
+                        )
+                        raise err
+
+                    logger.warning(
+                        f"Roblox API request '{func.__name__}' hit error: {err}. "
+                        f"Retrying in {delay:.1f}s ({retries}/{max_retries})..."
+                    )
+                    time.sleep(delay)
+                    delay *= backoff_factor
+
+            return None
+
         return wrapper
+
     return decorator
-
-def batch_process_entities(data: list, batch_size: int = 50):
-    """Generator to process large roblox entity batches efficiently."""
-    for i in range(0, len(data), batch_size):
-        yield data[i:i + batch_size]
-
-def performance_timer(func: Callable):
-    """Decorator to log execution duration of core methods."""
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        start = time.perf_counter()
-        result = func(*args, **kwargs)
-        duration = time.perf_counter() - start
-        if duration > 0.1:
-            logger.debug(f"Method {func.__name__} took {duration:.4f}s")
-        return result
-    return wrapper
