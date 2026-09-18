@@ -1,50 +1,30 @@
-import asyncio
-import time
-from typing import List, Any, Callable, Optional
+import json
+import base64
 
+def decode_roblox_data(encoded_payload: str) -> dict:
+    """Decodes base64 encoded Roblox JSON strings."""
+    try:
+        decoded_bytes = base64.b64decode(encoded_payload)
+        return json.loads(decoded_bytes.decode('utf-8'))
+    except (ValueError, KeyError, json.JSONDecodeError) as e:
+        return {"error": "decoding_failed", "details": str(e)}
 
-class BatchProcessor:
-    """Optimizes API and data processing by grouping items into dynamic batches."""
+def format_roblox_timestamp(timestamp: float) -> str:
+    """Converts roblox epoch to human readable format."""
+    from datetime import datetime
+    return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
-    def __init__(self, batch_size: int = 50, flush_interval: float = 0.2):
-        self.batch_size = batch_size
-        self.flush_interval = flush_interval
-        self.queue: asyncio.Queue = asyncio.Queue()
-        self._worker_task: Optional[asyncio.Task] = None
+def sanitize_robux_value(value: any) -> int:
+    """Ensures currency data is treated as integer."""
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return 0
 
-    async def start(self, process_callback: Callable[[List[Any]], Any]):
-        """Starts the background worker task to process queued items."""
-        self._worker_task = asyncio.create_task(self._worker(process_callback))
-
-    async def add_item(self, item: Any):
-        """Adds a single item to the queue for batch processing."""
-        await self.queue.put(item)
-
-    async def _worker(self, process_callback: Callable[[List[Any]], Any]):
-        while True:
-            batch = []
-            start_time = time.time()
-
-            while len(batch) < self.batch_size:
-                elapsed = time.time() - start_time
-                remaining_time = self.flush_interval - elapsed
-                if remaining_time <= 0:
-                    break
-                try:
-                    item = await asyncio.wait_for(self.queue.get(), timeout=max(remaining_time, 0.001))
-                    batch.append(item)
-                    self.queue.task_done()
-                except asyncio.TimeoutError:
-                    break
-
-            if batch:
-                try:
-                    await process_callback(batch)
-                except Exception as err:
-                    print(f"Batch processing error: {err}")
-
-    async def stop(self):
-        """Gracefully flushes remaining items and stops the background worker."""
-        if self._worker_task:
-            await self.queue.join()
-            self._worker_task.cancel()
+def process_player_stats(data: dict) -> dict:
+    """Transforms raw player stat dictionaries."""
+    return {
+        "id": data.get("UserId", 0),
+        "balance": sanitize_robux_value(data.get("AccountBalance", 0)),
+        "active": data.get("IsOnline", False)
+    }
