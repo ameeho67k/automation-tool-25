@@ -3,34 +3,38 @@ import os
 from typing import Any, Dict
 
 DEFAULT_CONFIG = {
-    "roblox_studio_path": "C:/Program Files (x86)/Roblox/Versions/",
-    "auto_save_interval": 300,
-    "debug_mode": False,
-    "api_retries": 3
+    "roblox_path": "C:/Program Files (x86)/Roblox/Versions",
+    "auto_login": True,
+    "retry_limit": 3,
+    "headless": False
 }
 
-def load_config(config_path: str = "config.json") -> Dict[str, Any]:
-    """Loads configuration from disk or returns defaults."""
-    if not os.path.exists(config_path):
-        save_config(DEFAULT_CONFIG, config_path)
-        return DEFAULT_CONFIG
+def load_config(filepath: str = "config.json") -> Dict[str, Any]:
+    """Loads configuration from disk with fallback to defaults."""
+    config = DEFAULT_CONFIG.copy()
+
+    if not os.path.exists(filepath):
+        _save_config(filepath, config)
+        return config
 
     try:
-        with open(config_path, "r") as f:
-            data = json.load(f)
-            # Merge with defaults to ensure missing keys are present
-            return {**DEFAULT_CONFIG, **data}
+        with open(filepath, 'r') as f:
+            user_config = json.load(f)
+            config.update(user_config)
     except (json.JSONDecodeError, IOError):
-        return DEFAULT_CONFIG
+        pass
 
-def save_config(config: Dict[str, Any], config_path: str = "config.json") -> None:
-    """Persists current configuration to a JSON file."""
+    return config
+
+def _save_config(filepath: str, config: Dict[str, Any]) -> None:
+    """Persists current configuration dictionary to json file."""
     try:
-        with open(config_path, "w") as f:
+        with open(filepath, 'w') as f:
             json.dump(config, f, indent=4)
-    except IOError as e:
-        print(f"Failed to save configuration: {e}")
+    except IOError:
+        pass
 
 if __name__ == "__main__":
-    config = load_config()
-    print(f"Loaded config: {config}")
+    # Example usage for automation-tool-25 initialization
+    current_config = load_config()
+    print(f"Loaded settings: {current_config}")
