@@ -1,25 +1,38 @@
-class AutomationError(Exception):
-    """Base exception for all automation-tool-25 errors."""
-    pass
+import time
+import functools
+import logging
 
-class RobloxSessionError(AutomationError):
-    """Raised when authentication or session heartbeat fails."""
-    pass
+# Configure logger for automation-tool-25
+logger = logging.getLogger('automation-tool-25')
 
-class DataParsingError(AutomationError):
-    """Raised when API response format is unexpected."""
-    pass
+def retry_on_failure(max_attempts=3, delay=2, backoff=2):
+    """
+    Decorator to implement exponential backoff for network operations.
+    
+    Args:
+        max_attempts: Maximum number of retries.
+        delay: Initial delay in seconds.
+        backoff: Multiplier for the delay after each failure.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            current_delay = delay
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except (ConnectionError, TimeoutError) as e:
+                    if attempt == max_attempts - 1:
+                        logger.error(f'Failed after {max_attempts} attempts: {e}')
+                        raise
+                    
+                    logger.warning(f'Attempt {attempt + 1} failed, retrying in {current_delay}s...')
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+            return None
+        return wrapper
+    return decorator
 
-class RateLimitExceeded(AutomationError):
-    """Raised when too many requests are sent to Roblox API."""
-    def __init__(self, retry_after: int = 60):
-        self.retry_after = retry_after
-        super().__init__(f"Rate limit exceeded. Wait {retry_after} seconds.")
-
-class GameProcessError(AutomationError):
-    """Raised when the target Roblox instance is unresponsive."""
-    pass
-
-class ValidationError(AutomationError):
-    """Raised when configuration or inputs fail validation."""
+class NetworkException(Exception):
+    """Custom base exception for network-related failures in Roblox API."""
     pass
