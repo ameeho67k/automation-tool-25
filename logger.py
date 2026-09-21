@@ -1,29 +1,38 @@
 import logging
-import sys
-from functools import lru_cache
+from logging.handlers import RotatingFileHandler
+import os
 
-@lru_cache(maxsize=128)
-def get_logger(name: str) -> logging.Logger:
-    """Creates and configures a cached logger instance."""
+def setup_logger(name: str, log_file: str = "automation.log"):
+    """Configures a rotating file logger for Roblox automation."""
     logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    # Ensure logs directory exists
+    log_dir = "logs"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    # Setup rotation: 5MB per file, keep 3 backups
+    handler = RotatingFileHandler(
+        os.path.join(log_dir, log_file),
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3
+    )
+
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    handler.setFormatter(formatter)
+
     if not logger.handlers:
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            '[%(asctime)s] [%(name)s] [%(levelname)s] - %(message)s'
-        )
-        handler.setFormatter(formatter)
         logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
+        # Also output to console for real-time monitoring
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
     return logger
 
-def log_performance(func):
-    """Decorator to track execution duration for optimization."""
-    import time
-    def wrapper(*args, **kwargs):
-        start = time.perf_counter()
-        result = func(*args, **kwargs)
-        duration = time.perf_counter() - start
-        if duration > 0.1:
-            get_logger('perf').warning(f'{func.__name__} took {duration:.4f}s')
-        return result
-    return wrapper
+# Global logger instance for automation-tool-25
+logger = setup_logger("automation-tool-25")
