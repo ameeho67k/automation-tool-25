@@ -1,38 +1,25 @@
-import time
-import functools
-import logging
+class AutomationError(Exception):
+    """Base exception for all automation-tool-25 errors."""
+    pass
 
-# Configure logger for automation-tool-25
-logger = logging.getLogger('automation-tool-25')
+class RobloxConnectionError(AutomationError):
+    """Raised when the connection to Roblox API fails."""
+    pass
 
-def retry_on_failure(max_attempts=3, delay=2, backoff=2):
-    """
-    Decorator to implement exponential backoff for network operations.
-    
-    Args:
-        max_attempts: Maximum number of retries.
-        delay: Initial delay in seconds.
-        backoff: Multiplier for the delay after each failure.
-    """
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            current_delay = delay
-            for attempt in range(max_attempts):
-                try:
-                    return func(*args, **kwargs)
-                except (ConnectionError, TimeoutError) as e:
-                    if attempt == max_attempts - 1:
-                        logger.error(f'Failed after {max_attempts} attempts: {e}')
-                        raise
-                    
-                    logger.warning(f'Attempt {attempt + 1} failed, retrying in {current_delay}s...')
-                    time.sleep(current_delay)
-                    current_delay *= backoff
-            return None
-        return wrapper
-    return decorator
+class ValidationError(AutomationError):
+    """Raised when input parameters fail schema validation."""
+    pass
 
-class NetworkException(Exception):
-    """Custom base exception for network-related failures in Roblox API."""
+class SessionExpiredError(AutomationError):
+    """Raised when the auth session cookie is invalid."""
+    pass
+
+class RateLimitExceeded(AutomationError):
+    """Raised when exceeding API request quotas."""
+    def __init__(self, retry_after=60):
+        self.retry_after = retry_after
+        super().__init__(f"Rate limit hit. Retry after {retry_after} seconds")
+
+class AssetProcessingError(AutomationError):
+    """Raised during failure to parse or upload assets."""
     pass
