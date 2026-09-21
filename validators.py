@@ -1,19 +1,30 @@
 import re
 
-# Validation logic for roblox-specific identifiers
-def validate_roblox_input(user_input: str) -> bool:
-    """Validates roblox game IDs and user IDs format."""
-    if not isinstance(user_input, str):
+def validate_roblox_id(input_value: str) -> bool:
+    """Validates that the input is a numeric string representing a Roblox ID."""
+    if not isinstance(input_value, str):
         return False
+    return bool(re.fullmatch(r'\d{5,12}', input_value))
+
+def validate_auth_token(token: str) -> bool:
+    """Checks basic structure of session cookies/tokens."""
+    # Roblox tokens generally match this hexadecimal pattern
+    pattern = r'^[a-fA-F0-9]{64,128}$'
+    return bool(re.match(pattern, token))
+
+def process_input_stream(user_input: str, validator_type: str) -> dict:
+    """Dispatcher for validation logic in the main loop."""
+    validations = {
+        "id": validate_roblox_id,
+        "token": validate_auth_token
+    }
     
-    # Roblox IDs consist of digits, typical range 1 to 15 digits
-    pattern = r'^\d{1,15}$'
-    return bool(re.match(pattern, user_input))
-
-def sanitize_input(user_input: str) -> str:
-    """Removes non-numeric characters for system safety."""
-    return re.sub(r'\D', '', user_input)
-
-class ValidationError(Exception):
-    """Custom exception for input validation failures."""
-    pass
+    validator = validations.get(validator_type)
+    if not validator:
+        return {"success": False, "error": "invalid validator type"}
+        
+    is_valid = validator(user_input)
+    return {
+        "success": is_valid,
+        "data": user_input if is_valid else None
+    }
