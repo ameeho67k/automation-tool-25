@@ -1,48 +1,43 @@
-import sys
+"""Roblox automation constants and configuration defaults."""
 
-# performance-optimized constants for roblox automation
-# cached lookups and pre-allocated memory structures
+from enum import Enum, IntEnum
 
-CACHE_EXPIRATION_SECONDS = 300
-MAX_RETRY_ATTEMPTS = 3
-ROBLOX_API_BASE = "https://api.roblox.com"
 
-# pre-computed bitwise masks for performance
-READ_ACCESS_MASK = 0b00000001
-WRITE_ACCESS_MASK = 0b00000010
-EXECUTE_ACCESS_MASK = 0b00000100
+class RobloxAPIEndpoint(str, Enum):
+    """Base endpoints for Roblox Web APIs."""
+    USERS = "https://users.roblox.com"
+    PRESENCE = "https://presence.roblox.com"
+    GROUPS = "https://groups.roblox.com"
+    ECONOMY = "https://economy.roblox.com"
+    ASSETS = "https://assetdelivery.roblox.com"
+    GAMES = "https://games.roblox.com"
 
-# memory-efficient lookup for object types
-OBJECT_TYPE_MAP = {
-    0: "Workspace",
-    1: "Players",
-    2: "Lighting",
-    3: "ReplicatedStorage",
-    4: "ServerScriptService"
+
+class AssetType(IntEnum):
+    """Common Roblox asset type IDs."""
+    IMAGE = 1
+    AUDIO = 3
+    MESH = 4
+    LUA = 5
+    HAT = 8
+    PLACE = 9
+    MODEL = 10
+    SHIRT = 11
+    PANTS = 12
+    ANIMATION = 24
+
+
+# Request limits and timeouts
+DEFAULT_TIMEOUT_SECONDS: int = 15
+MAX_RETRIES: int = 3
+RATE_LIMIT_COOLDOWN_SECONDS: float = 2.5
+
+# Default HTTP Headers for bot requests
+DEFAULT_HEADERS: dict[str, str] = {
+    "User-Agent": "RobloxAutomationTool/2.5",
+    "Accept": "application/json",
+    "Content-Type": "application/json",
 }
 
-# optimized buffer sizes for network transmission
-CHUNK_SIZE = 4096
-BUFFER_THRESHOLD = 1024 * 64
-
-# session timeout configuration
-TIMEOUT_CONFIG = {
-    "connect": 5.0,
-    "read": 15.0,
-    "write": 10.0
-}
-
-def get_system_platform():
-    """returns platform identifier for hardware optimization"""
-    return sys.platform
-
-# platform specific thread optimization constants
-THREAD_COUNT = 4 if sys.platform == "win32" else 8
-
-__all__ = [
-    "CACHE_EXPIRATION_SECONDS",
-    "MAX_RETRY_ATTEMPTS",
-    "OBJECT_TYPE_MAP",
-    "CHUNK_SIZE",
-    "THREAD_COUNT"
-]
+# Roblox Cookie key name
+ROBLOSECURITY_COOKIE_NAME: str = ".ROBLOSECURITY"
