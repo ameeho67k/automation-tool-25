@@ -1,35 +1,19 @@
 import re
 
-class InputValidator:
-    """
-    Validates incoming roblox asset identifiers and user inputs
-    to prevent malformed processing in automation-tool-25.
-    """
+# Validation logic for roblox-specific identifiers
+def validate_roblox_input(user_input: str) -> bool:
+    """Validates roblox game IDs and user IDs format."""
+    if not isinstance(user_input, str):
+        return False
     
-    ROBLOX_ID_PATTERN = re.compile(r'^\d+$')
-    MAX_NAME_LENGTH = 50
+    # Roblox IDs consist of digits, typical range 1 to 15 digits
+    pattern = r'^\d{1,15}$'
+    return bool(re.match(pattern, user_input))
 
-    @staticmethod
-    def validate_asset_id(asset_id: str) -> bool:
-        """Ensure asset_id is a positive integer string."""
-        if not asset_id or not InputValidator.ROBLOX_ID_PATTERN.match(asset_id):
-            return False
-        return int(asset_id) > 0
+def sanitize_input(user_input: str) -> str:
+    """Removes non-numeric characters for system safety."""
+    return re.sub(r'\D', '', user_input)
 
-    @staticmethod
-    def validate_task_name(name: str) -> bool:
-        """Verify task name meets naming convention requirements."""
-        if not name or len(name) > InputValidator.MAX_NAME_LENGTH:
-            return False
-        return name.isalnum() or '_' in name
-
-    @classmethod
-    def process_input(cls, asset_id: str, task_name: str):
-        """Main validation gate for processing logic."""
-        if not cls.validate_asset_id(asset_id):
-            raise ValueError(f"Invalid Roblox Asset ID: {asset_id}")
-            
-        if not cls.validate_task_name(task_name):
-            raise ValueError(f"Invalid task name format: {task_name}")
-            
-        return True
+class ValidationError(Exception):
+    """Custom exception for input validation failures."""
+    pass
