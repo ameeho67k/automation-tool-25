@@ -1,38 +1,39 @@
 import logging
-from logging.handlers import RotatingFileHandler
+import logging.handlers
 import os
 
-def setup_logger(name: str, log_file: str = "automation.log"):
-    """Configures a rotating file logger for Roblox automation."""
+LOG_FILE = "automation-tool-25.log"
+
+def setup_logger(name: str = "roblox-automation") -> logging.Logger:
+    """
+    Configures a rotating file logger for the automation tool.
+    Keeps 5 files of 5MB each.
+    """
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
-    # Ensure logs directory exists
-    log_dir = "logs"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    # Setup rotation: 5MB per file, keep 3 backups
-    handler = RotatingFileHandler(
-        os.path.join(log_dir, log_file),
-        maxBytes=5 * 1024 * 1024,
-        backupCount=3
-    )
-
-    formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
-    handler.setFormatter(formatter)
-
+    # Prevent duplicate handlers if setup is called multiple times
     if not logger.handlers:
+        # Rotating file handler: max 5MB per file, keep 5 backups
+        handler = logging.handlers.RotatingFileHandler(
+            LOG_FILE, 
+            maxBytes=5 * 1024 * 1024, 
+            backupCount=5
+        )
+        
+        # Standard formatting with timestamps for roblox sessions
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        handler.setFormatter(formatter)
         logger.addHandler(handler)
-        # Also output to console for real-time monitoring
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        
+        # Console output for real-time monitoring
+        console = logging.StreamHandler()
+        console.setFormatter(formatter)
+        logger.addHandler(console)
 
     return logger
 
-# Global logger instance for automation-tool-25
-logger = setup_logger("automation-tool-25")
+# Instance for global application usage
+logger = setup_logger()
