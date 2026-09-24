@@ -1,43 +1,32 @@
 import time
 import logging
-from functools import wraps
-from typing import Callable, Any, Tuple, Type
+from typing import Optional, List, Union
 
-logger = logging.getLogger("roblox_automation")
+logger = logging.getLogger('automation-tool-25')
 
+def format_roblox_id(id_val: Union[str, int]) -> Optional[int]:
+    """Converts varied input types to a validated Roblox ID integer."""
+    try:
+        return int(id_val)
+    except (ValueError, TypeError):
+        logger.error(f"Invalid ID format provided: {id_val}")
+        return None
 
-def network_retry(
-    max_retries: int = 4,
-    backoff_factor: float = 2.0,
-    retry_exceptions: Tuple[Type[BaseException], ...] = (Exception,)
-) -> Callable:
-    """Decorator to retry Roblox API network requests using exponential backoff."""
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            retries = 0
-            delay = 1.0
+def retry_request(func: callable, retries: int = 3, delay: float = 1.0) -> Optional[dict]:
+    """Retries a network operation for Roblox API endpoints."""
+    for attempt in range(retries):
+        try:
+            return func()
+        except Exception as e:
+            logger.warning(f"Attempt {attempt + 1} failed: {e}")
+            time.sleep(delay)
+    return None
 
-            while retries <= max_retries:
-                try:
-                    return func(*args, **kwargs)
-                except retry_exceptions as err:
-                    retries += 1
-                    if retries > max_retries:
-                        logger.error(
-                            f"Operation '{func.__name__}' failed after {max_retries} retries. Error: {err}"
-                        )
-                        raise err
+def sanitize_input(data: List[str]) -> List[str]:
+    """Cleans raw input lists by removing whitespace and empty entries."""
+    return [item.strip() for item in data if item and item.strip()]
 
-                    logger.warning(
-                        f"Roblox API request '{func.__name__}' hit error: {err}. "
-                        f"Retrying in {delay:.1f}s ({retries}/{max_retries})..."
-                    )
-                    time.sleep(delay)
-                    delay *= backoff_factor
-
-            return None
-
-        return wrapper
-
-    return decorator
+def log_task_completion(task_name: str, status: bool = True) -> None:
+    """Records status of automation tasks to the console."""
+    state = "success" if status else "failure"
+    logger.info(f"Task {task_name} completed with status: {state}")
