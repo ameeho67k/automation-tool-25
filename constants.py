@@ -1,43 +1,30 @@
-"""Roblox automation constants and configuration defaults."""
+import os
 
-from enum import Enum, IntEnum
+# Roblox API and Automation Constants
+ROBLOX_BASE_URL = "https://roblox.com"
+ROBLOX_API_URL = "https://apis.roblox.com"
 
-
-class RobloxAPIEndpoint(str, Enum):
-    """Base endpoints for Roblox Web APIs."""
-    USERS = "https://users.roblox.com"
-    PRESENCE = "https://presence.roblox.com"
-    GROUPS = "https://groups.roblox.com"
-    ECONOMY = "https://economy.roblox.com"
-    ASSETS = "https://assetdelivery.roblox.com"
-    GAMES = "https://games.roblox.com"
-
-
-class AssetType(IntEnum):
-    """Common Roblox asset type IDs."""
-    IMAGE = 1
-    AUDIO = 3
-    MESH = 4
-    LUA = 5
-    HAT = 8
-    PLACE = 9
-    MODEL = 10
-    SHIRT = 11
-    PANTS = 12
-    ANIMATION = 24
-
-
-# Request limits and timeouts
-DEFAULT_TIMEOUT_SECONDS: int = 15
-MAX_RETRIES: int = 3
-RATE_LIMIT_COOLDOWN_SECONDS: float = 2.5
-
-# Default HTTP Headers for bot requests
-DEFAULT_HEADERS: dict[str, str] = {
-    "User-Agent": "RobloxAutomationTool/2.5",
+# Default headers for automation requests
+DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     "Accept": "application/json",
-    "Content-Type": "application/json",
+    "Content-Type": "application/json"
 }
 
-# Roblox Cookie key name
-ROBLOSECURITY_COOKIE_NAME: str = ".ROBLOSECURITY"
+# Retry policy configuration
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 2
+
+# File paths and directory constants
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOGS_DIR = os.path.join(BASE_DIR, "logs")
+ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+
+# Roblox-specific status codes
+STATUS_SUCCESS = 200
+STATUS_UNAUTHORIZED = 401
+STATUS_TOO_MANY_REQUESTS = 429
+
+# Performance throttling settings
+REQUEST_TIMEOUT_SECONDS = 10
+RATE_LIMIT_COOLDOWN = 60
