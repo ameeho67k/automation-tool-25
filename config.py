@@ -1,40 +1,48 @@
 import json
 import os
+from pathlib import Path
 from typing import Any, Dict
 
-DEFAULT_CONFIG = {
-    "roblox_path": "C:/Program Files (x86)/Roblox/Versions",
-    "auto_login": True,
-    "retry_limit": 3,
-    "headless": False
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "roblox_cookie": "",
+    "place_id": 0,
+    "request_delay": 1.5,
+    "max_retries": 3,
+    "timeout": 10,
+    "headless": True,
+    "user_agent": "Roblox/WinInet",
+    "webhook_url": ""
 }
 
-def load_config(filepath: str = "config.json") -> Dict[str, Any]:
-    """Loads configuration from disk with fallback to defaults."""
-    config = DEFAULT_CONFIG.copy()
 
-    if not os.path.exists(filepath):
-        _save_config(filepath, config)
-        return config
+class ConfigLoader:
+    """Loads and merges configuration settings for Roblox automation."""
 
-    try:
-        with open(filepath, 'r') as f:
-            user_config = json.load(f)
-            config.update(user_config)
-    except (json.JSONDecodeError, IOError):
-        pass
+    def __init__(self, config_path: str = "config.json"):
+        self.config_path = Path(config_path)
+        self._config: Dict[str, Any] = DEFAULT_CONFIG.copy()
 
-    return config
+    def load(self) -> Dict[str, Any]:
+        """Load configuration from JSON file and environment variables."""
+        if self.config_path.exists():
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    file_config = json.load(f)
+                    self._config.update(file_config)
+            except (json.JSONDecodeError, OSError) as err:
+                print(f"Warning: Failed to load {self.config_path}: {err}")
 
-def _save_config(filepath: str, config: Dict[str, Any]) -> None:
-    """Persists current configuration dictionary to json file."""
-    try:
-        with open(filepath, 'w') as f:
-            json.dump(config, f, indent=4)
-    except IOError:
-        pass
+        # Override with environment variables if present
+        env_cookie = os.getenv("ROBLOX_COOKIE")
+        if env_cookie:
+            self._config["roblox_cookie"] = env_cookie
 
-if __name__ == "__main__":
-    # Example usage for automation-tool-25 initialization
-    current_config = load_config()
-    print(f"Loaded settings: {current_config}")
+        env_place_id = os.getenv("ROBLOX_PLACE_ID")
+        if env_place_id and env_place_id.isdigit():
+            self._config["place_id"] = int(env_place_id)
+
+        return self._config
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Retrieve a configuration option by key."""
+        return self._config.get(key, default)
