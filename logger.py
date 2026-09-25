@@ -2,32 +2,31 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 
-def setup_logger(name: str, log_file: str = 'automation.log') -> logging.Logger:
-    """Initializes a rotating file logger for roblox automation tasks."""
+def setup_logger(name='automation-tool-25', log_file='automation.log', level=logging.INFO):
+    """Configures a rotating file logger for Roblox automation tasks."""
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
 
     # Prevent duplicate handlers if logger is re-initialized
     if not logger.handlers:
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+        # Format: timestamp - name - level - message
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-        # Rotate at 5MB, keep 3 backups
-        handler = RotatingFileHandler(
+        # File handler: 5MB max, keep 3 backup files
+        file_handler = RotatingFileHandler(
             log_file, 
-            maxBytes=5 * 1024 * 1024, 
+            maxBytes=5*1024*1024, 
             backupCount=3
         )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
-        # Stream to console for active debugging
+        # Console output for real-time monitoring
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
     return logger
 
-# Instantiate core logger
-logger = setup_logger('automation-tool-25')
+# Global logger instance
+logger = setup_logger()
