@@ -1,32 +1,36 @@
 import time
+import random
 import logging
-from typing import Optional, List, Union
 
-logger = logging.getLogger('automation-tool-25')
+def get_random_delay(min_sec=1.5, max_sec=3.5):
+    """Generates a randomized delay to mimic human behavior."""
+    return random.uniform(min_sec, max_sec)
 
-def format_roblox_id(id_val: Union[str, int]) -> Optional[int]:
-    """Converts varied input types to a validated Roblox ID integer."""
+def sleep_random(min_sec=1.5, max_sec=3.5):
+    """Pauses execution for a randomized duration."""
+    time.sleep(get_random_delay(min_sec, max_sec))
+
+def validate_roblox_user_id(user_id):
+    """Ensures the user ID format is a positive integer."""
     try:
-        return int(id_val)
+        val = int(user_id)
+        return val > 0
     except (ValueError, TypeError):
-        logger.error(f"Invalid ID format provided: {id_val}")
-        return None
+        return False
 
-def retry_request(func: callable, retries: int = 3, delay: float = 1.0) -> Optional[dict]:
-    """Retries a network operation for Roblox API endpoints."""
+def format_log_message(module_name, message):
+    """Standardizes log output for tool components."""
+    timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+    return f"[{timestamp}] [{module_name}] {message}"
+
+def retry_operation(func, retries=3, delay=1.0):
+    """Retries a function call on failure with exponential backoff."""
+    last_exception = None
     for attempt in range(retries):
         try:
             return func()
         except Exception as e:
-            logger.warning(f"Attempt {attempt + 1} failed: {e}")
-            time.sleep(delay)
+            last_exception = e
+            time.sleep(delay * (2 ** attempt))
+    logging.error(f"Operation failed after {retries} attempts: {last_exception}")
     return None
-
-def sanitize_input(data: List[str]) -> List[str]:
-    """Cleans raw input lists by removing whitespace and empty entries."""
-    return [item.strip() for item in data if item and item.strip()]
-
-def log_task_completion(task_name: str, status: bool = True) -> None:
-    """Records status of automation tasks to the console."""
-    state = "success" if status else "failure"
-    logger.info(f"Task {task_name} completed with status: {state}")
