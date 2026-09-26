@@ -1,54 +1,48 @@
-import re
-from typing import Dict, Optional
+import functools
+import time
+import logging
+from typing import Callable, Any
 
-ROBLOX_BASE_URL = "https://www.roblox.com"
-USERS_API_URL = "https://users.roblox.com"
-GAMES_API_URL = "https://games.roblox.com"
+# Logger setup for automation-tool-25
+logger = logging.getLogger(__name__)
 
+def memoize_with_ttl(ttl_seconds: int = 300):
+    """Cache function results to optimize repeated roblox API calls"""
+    def decorator(func: Callable):
+        cache = {}
 
-def build_roblox_headers(cookie: Optional[str] = None, csrf_token: Optional[str] = None) -> Dict[str, str]:
-    """Construct standard HTTP headers required for Roblox web requests."""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json",
-    }
-    if cookie:
-        headers["Cookie"] = f".ROBLOSECURITY={cookie}"
-    if csrf_token:
-        headers["X-CSRF-TOKEN"] = csrf_token
-    return headers
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            key = (args, tuple(sorted(kwargs.items())))
+            now = time.time()
+            
+            if key in cache:
+                result, timestamp = cache[key]
+                if now - timestamp < ttl_seconds:
+                    return result
+            
+            result = func(*args, **kwargs)
+            cache[key] = (result, now)
+            return result
+        return wrapper
+    return decorator
 
+def batch_process(items: list, chunk_size: int = 50):
+    """Generator to process large object lists in manageable chunks"""
+    for i in range(0, len(items), chunk_size):
+        yield items[i:i + chunk_size]
 
-def parse_place_id(input_str: str) -> Optional[int]:
-    """Extract a numeric Roblox place ID from a raw ID or game URL."""
-    input_str = input_str.strip()
-    if input_str.isdigit():
-        return int(input_str)
-    
-    match = re.search(r"games/(\d+)", input_str)
-    if match:
-        return int(match.group(1))
-    return None
-
-
-def format_user_profile_url(user_id: int) -> str:
-    """Generate standard web profile URL for a given user ID."""
-    return f"{ROBLOX_BASE_URL}/users/{user_id}/profile"
-
-
-def extract_csrf_token(response_headers: Dict[str, str]) -> Optional[str]:
-    """Case-insensitive extraction of X-CSRF-TOKEN from response headers."""
-    for key, value in response_headers.items():
-        if key.lower() == "x-csrf-token":
-            return value
-    return None
-
-
-def build_endpoint(service: str, path: str) -> str:
-    """Build clean request endpoint for Roblox microservices."""
-    subdomains = {
-        "users": USERS_API_URL,
-        "games": GAMES_API_URL,
-    }
-    base_url = subdomains.get(service.lower(), ROBLOX_BASE_URL)
-    return f"{base_url}/{path.lstrip('/')}"
+def throttle_execution(interval: float):
+    """Rate limiting decorator to prevent roblox API rate limits"""
+    def decorator(func: Callable):
+        last_called = [0.0]
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            elapsed = time.time() - last_called[0]
+            if elapsed < interval:
+                time.sleep(interval - elapsed)
+            result = func(*args, **kwargs)
+            last_called[0] = time.time()
+            return result
+        return wrapper
+    return decorator
