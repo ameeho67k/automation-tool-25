@@ -1,48 +1,30 @@
-import json
 import os
 from pathlib import Path
-from typing import Any, Dict
 
-DEFAULT_CONFIG: Dict[str, Any] = {
-    "roblox_cookie": "",
-    "place_id": 0,
-    "request_delay": 1.5,
-    "max_retries": 3,
-    "timeout": 10,
-    "headless": True,
-    "user_agent": "Roblox/WinInet",
-    "webhook_url": ""
-}
+# Base directory for automation-tool-25 workspace
+BASE_DIR = Path(__file__).resolve().parent
 
+# Roblox-specific configuration constants
+ROBLOX_API_BASE = "https://api.roblox.com"
+MAX_RETRIES = 3
+TIMEOUT = 30
 
-class ConfigLoader:
-    """Loads and merges configuration settings for Roblox automation."""
+# Environment setup
+SESSION_TOKEN = os.getenv("ROBLOX_SESSION_ID", "anonymous")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-    def __init__(self, config_path: str = "config.json"):
-        self.config_path = Path(config_path)
-        self._config: Dict[str, Any] = DEFAULT_CONFIG.copy()
+def get_config_dict():
+    """Returns current runtime configuration settings."""
+    return {
+        "base_dir": str(BASE_DIR),
+        "api_base": ROBLOX_API_BASE,
+        "max_retries": MAX_RETRIES,
+        "timeout": TIMEOUT,
+        "log_level": LOG_LEVEL
+    }
 
-    def load(self) -> Dict[str, Any]:
-        """Load configuration from JSON file and environment variables."""
-        if self.config_path.exists():
-            try:
-                with open(self.config_path, "r", encoding="utf-8") as f:
-                    file_config = json.load(f)
-                    self._config.update(file_config)
-            except (json.JSONDecodeError, OSError) as err:
-                print(f"Warning: Failed to load {self.config_path}: {err}")
-
-        # Override with environment variables if present
-        env_cookie = os.getenv("ROBLOX_COOKIE")
-        if env_cookie:
-            self._config["roblox_cookie"] = env_cookie
-
-        env_place_id = os.getenv("ROBLOX_PLACE_ID")
-        if env_place_id and env_place_id.isdigit():
-            self._config["place_id"] = int(env_place_id)
-
-        return self._config
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Retrieve a configuration option by key."""
-        return self._config.get(key, default)
+if __name__ == "__main__":
+    # Validation of environment paths
+    if not BASE_DIR.exists():
+        raise FileNotFoundError("Base directory mapping failed")
+    print(f"Configuration loaded for session: {SESSION_TOKEN[:5]}***")
