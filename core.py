@@ -1,29 +1,27 @@
-import json
-import base64
-from typing import Any, Dict, Optional
+import time
+import random
 
-def encode_roblox_data(data: Dict[str, Any]) -> str:
-    """Serializes dictionary to base64 encoded JSON string."""
-    raw_json = json.dumps(data, separators=(',', ':'))
-    return base64.b64encode(raw_json.encode('utf-8')).decode('utf-8')
+def click_element(coords: tuple[int, int], delay: float = 0.5):
+    """Simulates a mouse click at specific screen coordinates."""
+    x, y = coords
+    print(f"[Automation] Clicking at: {x}, {y}")
+    time.sleep(delay)
 
-def decode_roblox_data(encoded_data: str) -> Optional[Dict[str, Any]]:
-    """Decodes base64 string back into Python dictionary."""
-    try:
-        decoded = base64.b64decode(encoded_data).decode('utf-8')
-        return json.loads(decoded)
-    except (ValueError, TypeError, json.JSONDecodeError):
-        return None
+def find_game_instance(process_name: str = "RobloxPlayerBeta.exe") -> bool:
+    """Verifies if a specific Roblox process is currently running."""
+    import psutil
+    for proc in psutil.process_iter(['name']):
+        if proc.info['name'] == process_name:
+            return True
+    return False
 
-def validate_datastore_key(key: str) -> bool:
-    """Checks if key follows standard Roblox naming conventions."""
-    if not key or len(key) > 50:
-        return False
-    return key.isalnum() or '_' in key
+def random_jitter(base_val: int, intensity: float = 0.1) -> int:
+    """Adds pseudo-random jitter to integer values for anti-cheat avoidance."""
+    variation = int(base_val * intensity)
+    return base_val + random.randint(-variation, variation)
 
-def process_player_payload(payload: str) -> Dict[str, Any]:
-    """Entry point for incoming Roblox network payloads."""
-    data = decode_roblox_data(payload)
-    if data is None:
-        return {"status": "error", "message": "invalid encoding"}
-    return {"status": "success", "data": data}
+def wait_for_load(seconds: int = 10):
+    """Pauses execution flow to allow game assets to render."""
+    jittered_time = random_jitter(seconds, 0.2)
+    print(f"[Automation] Waiting for {jittered_time} seconds")
+    time.sleep(jittered_time)
