@@ -1,30 +1,34 @@
 import os
 
-# Roblox API and Automation Constants
-ROBLOX_BASE_URL = "https://roblox.com"
-ROBLOX_API_URL = "https://apis.roblox.com"
+# Roblox API endpoint configuration
+ROBLOX_BASE_URL = "https://apis.roblox.com"
+ROBLOX_AUTH_HEADER = "RBX-Authentication-Token"
 
-# Default headers for automation requests
-DEFAULT_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Accept": "application/json",
-    "Content-Type": "application/json"
-}
-
-# Retry policy configuration
+# Operational thresholds and safety limits
 MAX_RETRIES = 3
-RETRY_DELAY_SECONDS = 2
+REQUEST_TIMEOUT = 10.0
+RATE_LIMIT_DELAY = 1.5
 
-# File paths and directory constants
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOGS_DIR = os.path.join(BASE_DIR, "logs")
-ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+# Error code mappings for roblox-specific edge cases
+ERR_UNAUTHORIZED = 401
+ERR_FORBIDDEN = 403
+ERR_RATE_LIMITED = 429
+ERR_SERVER_ERROR = 500
 
-# Roblox-specific status codes
-STATUS_SUCCESS = 200
-STATUS_UNAUTHORIZED = 401
-STATUS_TOO_MANY_REQUESTS = 429
+# Environment setup with fallback validation
+def get_api_key():
+    """Fetches and validates the required roblox session cookie."""
+    api_key = os.getenv("ROBLOX_SESSION_COOKIE")
+    if not api_key:
+        raise EnvironmentError("missing required environment variable: ROBLOX_SESSION_COOKIE")
+    if len(api_key) < 50:
+        raise ValueError("invalid roblox cookie format detected")
+    return api_key
 
-# Performance throttling settings
-REQUEST_TIMEOUT_SECONDS = 10
-RATE_LIMIT_COOLDOWN = 60
+# Default pathing for automation artifacts
+LOG_DIR = "./logs"
+DATA_DIR = "./data"
+
+# Configuration settings for robust error handling
+RETRY_BACKOFF_FACTOR = 2.0
+HTTP_SUCCESS_STATUS = 200
