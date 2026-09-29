@@ -1,36 +1,40 @@
-import time
-import functools
-import logging
+import re
 
-logger = logging.getLogger(__name__)
+# Validation schema for roblox automation inputs
+def validate_roblox_input(data: dict) -> bool:
+    """Ensures input data conforms to expected types and ranges."""
+    required_fields = ['job_id', 'thread_count', 'session_token']
+    
+    # Check for missing keys
+    if not all(k in data for k in required_fields):
+        return False
 
-def retry_network_op(retries=3, delay=2, backoff=2, exceptions=(ConnectionError, TimeoutError)):
-    """
-    Decorator to retry network-bound operations with exponential backoff.
-    """
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            current_delay = delay
-            for attempt in range(retries):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as e:
-                    if attempt == retries - 1:
-                        logger.error(f"Final attempt {attempt + 1} failed: {e}")
-                        raise
-                    
-                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {current_delay}s...")
-                    time.sleep(current_delay)
-                    current_delay *= backoff
-        return wrapper
-    return decorator
+    # Validate Job ID format (alphanumeric)
+    if not re.match(r'^[a-zA-Z0-9]+$', str(data['job_id'])):
+        return False
 
-@retry_network_op(retries=3)
-def validate_roblox_api_connection(url: str) -> bool:
-    """
-    Simple check for endpoint availability using standard request patterns.
-    """
-    import requests
-    response = requests.get(url, timeout=5)
-    return response.status_code == 200
+    # Validate Thread Count range
+    try:
+        threads = int(data['thread_count'])
+        if not (1 <= threads <= 64):
+            return False
+    except (ValueError, TypeError):
+        return False
+
+    # Validate Session Token length
+    if len(str(data['session_token'])) < 32:
+        return False
+
+    return True
+
+# Main processing loop integration utility
+def process_loop(queue):
+    """Example usage inside the automation processing loop."""
+    while True:
+        task = queue.get()
+        if not validate_roblox_input(task):
+            print(f"[!] Invalid task data: {task}")
+            continue
+        
+        # Proceed with processing logic
+        execute_task(task)
