@@ -1,30 +1,36 @@
-import re
+import time
+import functools
+import logging
 
-def validate_roblox_id(input_value: str) -> bool:
-    """Validates that the input is a numeric string representing a Roblox ID."""
-    if not isinstance(input_value, str):
-        return False
-    return bool(re.fullmatch(r'\d{5,12}', input_value))
+logger = logging.getLogger(__name__)
 
-def validate_auth_token(token: str) -> bool:
-    """Checks basic structure of session cookies/tokens."""
-    # Roblox tokens generally match this hexadecimal pattern
-    pattern = r'^[a-fA-F0-9]{64,128}$'
-    return bool(re.match(pattern, token))
+def retry_network_op(retries=3, delay=2, backoff=2, exceptions=(ConnectionError, TimeoutError)):
+    """
+    Decorator to retry network-bound operations with exponential backoff.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            current_delay = delay
+            for attempt in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    if attempt == retries - 1:
+                        logger.error(f"Final attempt {attempt + 1} failed: {e}")
+                        raise
+                    
+                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {current_delay}s...")
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+        return wrapper
+    return decorator
 
-def process_input_stream(user_input: str, validator_type: str) -> dict:
-    """Dispatcher for validation logic in the main loop."""
-    validations = {
-        "id": validate_roblox_id,
-        "token": validate_auth_token
-    }
-    
-    validator = validations.get(validator_type)
-    if not validator:
-        return {"success": False, "error": "invalid validator type"}
-        
-    is_valid = validator(user_input)
-    return {
-        "success": is_valid,
-        "data": user_input if is_valid else None
-    }
+@retry_network_op(retries=3)
+def validate_roblox_api_connection(url: str) -> bool:
+    """
+    Simple check for endpoint availability using standard request patterns.
+    """
+    import requests
+    response = requests.get(url, timeout=5)
+    return response.status_code == 200
