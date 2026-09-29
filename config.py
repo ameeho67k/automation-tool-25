@@ -1,30 +1,36 @@
+import json
 import os
-from pathlib import Path
+from typing import Any, Dict
 
-# Base directory for automation-tool-25 workspace
-BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_CONFIG = {
+    "roblox_studio_path": "C:\\Program Files (x86)\\Roblox\\Versions",
+    "auto_save_interval": 300,
+    "debug_mode": False,
+    "log_level": "INFO"
+}
 
-# Roblox-specific configuration constants
-ROBLOX_API_BASE = "https://api.roblox.com"
-MAX_RETRIES = 3
-TIMEOUT = 30
+def load_config(filepath: str = "config.json") -> Dict[str, Any]:
+    """
+    Loads configuration from JSON file or returns defaults if missing.
+    """
+    config = DEFAULT_CONFIG.copy()
+    
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r") as f:
+                user_config = json.load(f)
+                config.update(user_config)
+        except (json.JSONDecodeError, IOError):
+            print(f"Warning: Failed to load {filepath}, using defaults.")
+            
+    return config
 
-# Environment setup
-SESSION_TOKEN = os.getenv("ROBLOX_SESSION_ID", "anonymous")
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-
-def get_config_dict():
-    """Returns current runtime configuration settings."""
-    return {
-        "base_dir": str(BASE_DIR),
-        "api_base": ROBLOX_API_BASE,
-        "max_retries": MAX_RETRIES,
-        "timeout": TIMEOUT,
-        "log_level": LOG_LEVEL
-    }
-
-if __name__ == "__main__":
-    # Validation of environment paths
-    if not BASE_DIR.exists():
-        raise FileNotFoundError("Base directory mapping failed")
-    print(f"Configuration loaded for session: {SESSION_TOKEN[:5]}***")
+def save_config(config: Dict[str, Any], filepath: str = "config.json") -> None:
+    """
+    Persists current configuration state to disk.
+    """
+    try:
+        with open(filepath, "w") as f:
+            json.dump(config, f, indent=4)
+    except IOError as e:
+        print(f"Error saving config: {e}")
