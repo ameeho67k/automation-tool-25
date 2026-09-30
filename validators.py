@@ -1,40 +1,40 @@
 import re
+from typing import Optional
 
-# Validation schema for roblox automation inputs
-def validate_roblox_input(data: dict) -> bool:
-    """Ensures input data conforms to expected types and ranges."""
-    required_fields = ['job_id', 'thread_count', 'session_token']
-    
-    # Check for missing keys
-    if not all(k in data for k in required_fields):
-        return False
+def validate_roblox_user_id(user_id: str) -> bool:
+    """
+    Validates that a Roblox User ID is a numeric string of 1-12 digits.
 
-    # Validate Job ID format (alphanumeric)
-    if not re.match(r'^[a-zA-Z0-9]+$', str(data['job_id'])):
-        return False
+    :param user_id: The string ID to validate.
+    :return: True if valid, False otherwise.
+    """
+    return bool(re.fullmatch(r'\d{1,12}', user_id))
 
-    # Validate Thread Count range
-    try:
-        threads = int(data['thread_count'])
-        if not (1 <= threads <= 64):
-            return False
-    except (ValueError, TypeError):
-        return False
+def validate_game_place_id(place_id: int) -> bool:
+    """
+    Validates that a Roblox Place ID is a positive integer.
 
-    # Validate Session Token length
-    if len(str(data['session_token'])) < 32:
-        return False
+    :param place_id: The integer ID to check.
+    :return: True if positive, False otherwise.
+    """
+    return isinstance(place_id, int) and place_id > 0
 
-    return True
+def sanitize_script_name(name: str) -> Optional[str]:
+    """
+    Removes illegal characters from a script file name.
 
-# Main processing loop integration utility
-def process_loop(queue):
-    """Example usage inside the automation processing loop."""
-    while True:
-        task = queue.get()
-        if not validate_roblox_input(task):
-            print(f"[!] Invalid task data: {task}")
-            continue
-        
-        # Proceed with processing logic
-        execute_task(task)
+    :param name: Raw script name.
+    :return: Sanitized string or None if empty.
+    """
+    sanitized = re.sub(r'[^a-zA-Z0-9_\-]', '', name)
+    return sanitized if sanitized else None
+
+def validate_auth_token(token: str) -> bool:
+    """
+    Checks format of a ROBLOSECURITY token string.
+
+    :param token: The auth token string.
+    :return: True if pattern matches expected cookie format.
+    """
+    pattern = r'_[A-Fa-f0-9]{128,}'
+    return bool(re.match(pattern, token))
