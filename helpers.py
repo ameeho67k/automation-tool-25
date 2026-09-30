@@ -1,48 +1,53 @@
-import functools
 import time
 import logging
-from typing import Callable, Any
+from functools import wraps
+from typing import Callable, Any, Tuple
+import requests
 
-# Logger setup for automation-tool-25
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("roblox_automation")
 
-def memoize_with_ttl(ttl_seconds: int = 300):
-    """Cache function results to optimize repeated roblox API calls"""
-    def decorator(func: Callable):
-        cache = {}
+RETRYABLE_STATUS_CODES: Tuple[int, ...] = (429, 500, 502, 503, 504)
 
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            key = (args, tuple(sorted(kwargs.items())))
-            now = time.time()
-            
-            if key in cache:
-                result, timestamp = cache[key]
-                if now - timestamp < ttl_seconds:
-                    return result
-            
-            result = func(*args, **kwargs)
-            cache[key] = (result, now)
-            return result
-        return wrapper
-    return decorator
+def retry_network_op(
+    max_retries: int = 3,
+    backoff_factor: float = 1.5,
+    retryable_status_codes: Tuple[int, ...] = RETRYABLE_STATUS_CODES
+) -> Callable:
+    """
+    Decorator to retry failed Roblox HTTP requests with exponential backoff
+    and automatic handling of rate limits (429 status).
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            retries = 0
+            delay = 1.0
 
-def batch_process(items: list, chunk_size: int = 50):
-    """Generator to process large object lists in manageable chunks"""
-    for i in range(0, len(items), chunk_size):
-        yield items[i:i + chunk_size]
+            while True:
+                try:
+                    response = func(*args, **kwargs)
+                    if isinstance(response, requests.Response):
+                        if response.status_code in retryable_status_codes:
+                            response.raise_for_status()
+                    return response
+                except (requests.RequestException, requests.HTTPError) as exc:
+                    retries += 1
+                    if retries > max_retries:
+                        logger.error(f"Roblox API operation '{func.__name__}' failed after {max_retries} retries: {exc}")
+                        raise exc
 
-def throttle_execution(interval: float):
-    """Rate limiting decorator to prevent roblox API rate limits"""
-    def decorator(func: Callable):
-        last_called = [0.0]
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            elapsed = time.time() - last_called[0]
-            if elapsed < interval:
-                time.sleep(interval - elapsed)
-            result = func(*args, **kwargs)
-            last_called[0] = time.time()
-            return result
+                    current_delay = delay
+                    # Check for Roblox rate-limit Retry-After header
+                    if hasattr(exc, 'response') and exc.response is not None:
+                        retry_after = exc.response.headers.get("Retry-After")
+                        if retry_after and retry_after.isdigit():
+                            current_delay = float(retry_after)
+
+                    logger.warning(
+                        f"Network issue in '{func.__name__}': {exc}. Retrying in {current_delay:.2f}s (Attempt {retries}/{max_retries})"
+                    )
+                    time.sleep(current_delay)
+                    delay *= backoff_factor
+
         return wrapper
     return decorator
