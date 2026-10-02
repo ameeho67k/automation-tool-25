@@ -1,38 +1,43 @@
+import functools
 import time
-from functools import lru_cache
+import logging
+from typing import Callable, Any
 
-class RobloxEventProcessor:
-    """Handles Roblox API event processing with caching."""
+# Configure logger for automation-tool-25
+logger = logging.getLogger('handler')
 
-    def __init__(self, cache_size=128):
-        self.cache_size = cache_size
-        self._stats = {'processed': 0, 'hits': 0}
+_memoized_results = {}
 
-    @lru_cache(maxsize=128)
-    def fetch_player_data(self, user_id: int):
-        """Simulates expensive network request for user profile."""
-        # Mock latency
-        time.sleep(0.05)
-        return {"id": user_id, "status": "online", "timestamp": time.time()}
+def memoize_data(func: Callable) -> Callable:
+    """Cache repetitive Roblox API response patterns"""
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        key = (func.__name__, args, frozenset(kwargs.items()))
+        if key not in _memoized_results:
+            _memoized_results[key] = func(*args, **kwargs)
+        return _memoized_results[key]
+    return wrapper
 
-    def batch_process(self, user_ids: list):
-        """Processes list of user IDs with performance optimization."""
-        results = []
-        for uid in user_ids:
-            data = self.fetch_player_data(uid)
-            results.append(data)
-            self._stats['processed'] += 1
-        return results
+class RobloxDataHandler:
+    def __init__(self, request_delay: float = 0.05):
+        self.request_delay = request_delay
 
-    def clear_cache(self):
-        """Resets the memoization storage."""
-        self.fetch_player_data.cache_clear()
-
-    def get_metrics(self):
-        """Returns current processing performance metrics."""
-        info = self.fetch_player_data.cache_info()
+    @memoize_data
+    def get_server_status(self, place_id: int) -> dict:
+        """Fetch and cache server heartbeat data"""
+        time.sleep(self.request_delay)
         return {
-            "processed_count": self._stats['processed'],
-            "cache_hits": info.hits,
-            "cache_misses": info.misses
+            "place_id": place_id,
+            "active": True,
+            "timestamp": time.time()
         }
+
+    def bulk_process(self, place_ids: list[int]) -> list[dict]:
+        """Efficient batch processing for server queues"""
+        results = []
+        for pid in place_ids:
+            try:
+                results.append(self.get_server_status(pid))
+            except Exception as e:
+                logger.error(f"failed processing {pid}: {e}")
+        return results
