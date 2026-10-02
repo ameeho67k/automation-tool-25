@@ -1,41 +1,36 @@
-from typing import Optional, Dict, Any
+import re
+from typing import Union
 
-def validate_roblox_id(asset_id: Any) -> bool:
-    """Verify that the provided asset ID is a positive integer.
+USERNAME_REGEX = re.compile(r"^(?!_)(?!.*__)[a-zA-Z0-9_]{3,20}(?<!_)$")
 
-    Args:
-        asset_id: The ID to validate.
 
-    Returns:
-        bool: True if valid, False otherwise.
-    """
-    try:
-        val = int(asset_id)
-        return val > 0
-    except (ValueError, TypeError):
+def validate_roblox_username(username: str) -> bool:
+    """Validates if a string conforms to Roblox username rules."""
+    if not isinstance(username, str):
         return False
+    return bool(USERNAME_REGEX.match(username))
 
-def validate_config_schema(config: Dict[str, Any]) -> bool:
-    """Ensure the configuration dictionary contains required automation keys.
 
-    Args:
-        config: The automation settings dictionary.
+def validate_roblox_id(identifier: Union[int, str]) -> bool:
+    """Validates if a Roblox ID (User ID or Asset ID) is a valid positive integer."""
+    if isinstance(identifier, int):
+        return identifier > 0
+    if isinstance(identifier, str):
+        if not identifier.isdigit():
+            return False
+        if identifier.startswith("0") and len(identifier) > 1:
+            return False
+        try:
+            return int(identifier) > 0
+        except ValueError:
+            return False
+    return False
 
-    Returns:
-        bool: True if configuration is structurally valid.
-    """
-    required_keys = {'api_key', 'workspace_id', 'retries'}
-    return all(key in config for key in required_keys)
 
-def sanitize_input_string(raw_data: Optional[str]) -> str:
-    """Clean strings for safe usage in Roblox API requests.
-
-    Args:
-        raw_data: The input string to clean.
-
-    Returns:
-        str: Sanitized alphanumeric string.
-    """
-    if not raw_data:
-        return ""
-    return "".join(char for char in raw_data if char.isalnum())
+def validate_cookie_format(cookie: str) -> bool:
+    """Checks if a string resembles a typical Roblox .ROBLOSECURITY cookie format."""
+    if not isinstance(cookie, str):
+        return False
+    # Roblox security cookies almost always contain this warning prefix
+    warning_prefix = "_|WARNING:-DO-NOT-SHARE-THIS."
+    return warning_prefix in cookie
