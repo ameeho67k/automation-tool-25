@@ -1,40 +1,41 @@
-import re
-from typing import Optional
+from typing import Optional, Dict, Any
 
-def validate_roblox_user_id(user_id: str) -> bool:
-    """
-    Validates that a Roblox User ID is a numeric string of 1-12 digits.
+def validate_roblox_id(asset_id: Any) -> bool:
+    """Verify that the provided asset ID is a positive integer.
 
-    :param user_id: The string ID to validate.
-    :return: True if valid, False otherwise.
-    """
-    return bool(re.fullmatch(r'\d{1,12}', user_id))
+    Args:
+        asset_id: The ID to validate.
 
-def validate_game_place_id(place_id: int) -> bool:
+    Returns:
+        bool: True if valid, False otherwise.
     """
-    Validates that a Roblox Place ID is a positive integer.
+    try:
+        val = int(asset_id)
+        return val > 0
+    except (ValueError, TypeError):
+        return False
 
-    :param place_id: The integer ID to check.
-    :return: True if positive, False otherwise.
-    """
-    return isinstance(place_id, int) and place_id > 0
+def validate_config_schema(config: Dict[str, Any]) -> bool:
+    """Ensure the configuration dictionary contains required automation keys.
 
-def sanitize_script_name(name: str) -> Optional[str]:
-    """
-    Removes illegal characters from a script file name.
+    Args:
+        config: The automation settings dictionary.
 
-    :param name: Raw script name.
-    :return: Sanitized string or None if empty.
+    Returns:
+        bool: True if configuration is structurally valid.
     """
-    sanitized = re.sub(r'[^a-zA-Z0-9_\-]', '', name)
-    return sanitized if sanitized else None
+    required_keys = {'api_key', 'workspace_id', 'retries'}
+    return all(key in config for key in required_keys)
 
-def validate_auth_token(token: str) -> bool:
-    """
-    Checks format of a ROBLOSECURITY token string.
+def sanitize_input_string(raw_data: Optional[str]) -> str:
+    """Clean strings for safe usage in Roblox API requests.
 
-    :param token: The auth token string.
-    :return: True if pattern matches expected cookie format.
+    Args:
+        raw_data: The input string to clean.
+
+    Returns:
+        str: Sanitized alphanumeric string.
     """
-    pattern = r'_[A-Fa-f0-9]{128,}'
-    return bool(re.match(pattern, token))
+    if not raw_data:
+        return ""
+    return "".join(char for char in raw_data if char.isalnum())
