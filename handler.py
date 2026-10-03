@@ -1,43 +1,29 @@
-import functools
-import time
-import logging
-from typing import Callable, Any
-
-# Configure logger for automation-tool-25
-logger = logging.getLogger('handler')
-
-_memoized_results = {}
-
-def memoize_data(func: Callable) -> Callable:
-    """Cache repetitive Roblox API response patterns"""
-    @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        key = (func.__name__, args, frozenset(kwargs.items()))
-        if key not in _memoized_results:
-            _memoized_results[key] = func(*args, **kwargs)
-        return _memoized_results[key]
-    return wrapper
+import json
+from typing import Any, Dict, Optional
 
 class RobloxDataHandler:
-    def __init__(self, request_delay: float = 0.05):
-        self.request_delay = request_delay
+    """Utility for parsing and sanitizing Roblox API data packets."""
+    
+    @staticmethod
+    def sanitize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Removes null fields and cleans key names for processing."""
+        return {k: v for k, v in payload.items() if v is not None}
 
-    @memoize_data
-    def get_server_status(self, place_id: int) -> dict:
-        """Fetch and cache server heartbeat data"""
-        time.sleep(self.request_delay)
-        return {
-            "place_id": place_id,
-            "active": True,
-            "timestamp": time.time()
+    @staticmethod
+    def parse_roblox_json(raw_data: str) -> Optional[Dict[str, Any]]:
+        """Parses raw response strings into structured dictionaries."""
+        try:
+            data = json.loads(raw_data)
+            return data if isinstance(data, dict) else None
+        except json.JSONDecodeError:
+            return None
+
+    def format_datastore_entry(key: str, value: Any, scope: str = 'global') -> str:
+        """Constructs JSON strings for Roblox DataStore service."""
+        structure = {
+            "key": key,
+            "value": value,
+            "scope": scope,
+            "timestamp": "server_optimized"
         }
-
-    def bulk_process(self, place_ids: list[int]) -> list[dict]:
-        """Efficient batch processing for server queues"""
-        results = []
-        for pid in place_ids:
-            try:
-                results.append(self.get_server_status(pid))
-            except Exception as e:
-                logger.error(f"failed processing {pid}: {e}")
-        return results
+        return json.dumps(structure)
