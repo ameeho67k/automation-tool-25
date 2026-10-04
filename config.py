@@ -1,36 +1,36 @@
-import json
 import os
-from typing import Any, Dict
+import json
+import logging
 
-DEFAULT_CONFIG = {
-    "roblosecurity_token": None,
-    "auto_reconnect": True,
-    "polling_interval": 30,
-    "log_level": "INFO"
-}
+def load_config(path: str) -> dict:
+    """Loads and validates configuration for roblox automation."""
+    default_config = {
+        "retry_limit": 3,
+        "timeout": 30,
+        "webhook_url": None
+    }
 
-def load_config(path: str = "config.json") -> Dict[str, Any]:
-    """
-    loads configuration from file with fallback to defaults
-    """
-    config = DEFAULT_CONFIG.copy()
+    if not os.path.exists(path):
+        logging.warning("Config file missing, applying defaults")
+        return default_config
 
-    if os.path.exists(path):
-        try:
-            with open(path, "r") as f:
-                user_config = json.load(f)
-                config.update(user_config)
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"failed to load config, using defaults: {e}")
-    
-    return config
-
-def save_config(config: Dict[str, Any], path: str = "config.json") -> None:
-    """
-    persists current configuration to file
-    """
     try:
-        with open(path, "w") as f:
-            json.dump(config, f, indent=4)
-    except IOError as e:
-        print(f"failed to save config: {e}")
+        with open(path, 'r') as f:
+            data = json.load(f)
+            # Edge case validation for critical fields
+            if not isinstance(data.get('retry_limit'), int):
+                data['retry_limit'] = default_config['retry_limit']
+            return data
+    except (json.JSONDecodeError, IOError) as e:
+        logging.error(f"Config corruption detected: {e}")
+        return default_config
+
+def validate_env_vars() -> bool:
+    """Checks for existence of mandatory environment secrets."""
+    required = ['ROBLOSECURITY', 'API_KEY']
+    missing = [var for var in required if not os.getenv(var)]
+    
+    if missing:
+        logging.critical(f"Missing environment variables: {', '.join(missing)}")
+        return False
+    return True
