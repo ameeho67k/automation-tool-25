@@ -1,33 +1,36 @@
 import logging
-from logging.handlers import RotatingFileHandler
-import os
+import sys
+from typing import Optional
 
-def setup_logger(name='automation-tool-25', log_file='automation.log', level=logging.INFO):
-    """Configures a rotating file logger for Roblox automation tasks."""
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-
-    # Prevent duplicate handlers if setup is called multiple times
-    if logger.hasHandlers():
-        return logger
-
-    # Rotation settings: 5MB per file, keep 3 backups
-    handler = RotatingFileHandler(
-        log_file, 
-        maxBytes=5 * 1024 * 1024, 
-        backupCount=3
-    )
-
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    handler.setFormatter(formatter)
+class RobloxAutomationLogger:
+    """Handles standardized logging for automation-tool-25."""
     
-    logger.addHandler(handler)
+    def __init__(self, name: str, level: int = logging.INFO) -> None:
+        self.logger: logging.Logger = logging.getLogger(name)
+        self.logger.setLevel(level)
+        
+        handler: logging.StreamHandler = logging.StreamHandler(sys.stdout)
+        formatter: logging.Formatter = logging.Formatter(
+            "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
-    # Add stream handler for console output
-    console = logging.StreamHandler()
-    console.setFormatter(formatter)
-    logger.addHandler(console)
+    def info(self, message: str) -> None:
+        """Logs informational messages for tool execution."""
+        self.logger.info(message)
 
-    return logger
+    def error(self, message: str, exc_info: bool = False) -> None:
+        """Logs critical tool failures or errors."""
+        self.logger.error(message, exc_info=exc_info)
+
+    def debug(self, message: str) -> None:
+        """Logs granular details for troubleshooting automation scripts."""
+        self.logger.debug(message)
+
+    @staticmethod
+    def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
+        """Factory method to retrieve a configured logger instance."""
+        instance = RobloxAutomationLogger(name, level)
+        return instance.logger
