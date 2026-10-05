@@ -1,29 +1,45 @@
 import time
-import functools
-import requests
-from typing import Callable, Any
+import random
+import logging
+from functools import wraps
+from typing import Callable, Any, Type, Tuple
 
-def retry_request(max_retries: int = 3, delay: float = 2.0):
-    """Decorator for retrying network operations on failure."""
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            last_exception = None
-            for attempt in range(max_retries):
+logger = logging.getLogger("automation-tool.utils")
+
+def retry_on_failure(
+    retries: int = 3,
+    backoff_in_seconds: float = 1.5,
+    exceptions: Tuple[Type[BaseException], ...] = (Exception,)
+) -> Callable:
+    """
+    Decorator to retry a function on failure with exponential backoff and jitter.
+    Useful for Roblox API requests that may rate-limit or fail transiently.
+    """
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            attempt = 0
+            current_delay = backoff_in_seconds
+            
+            while attempt < retries:
                 try:
                     return func(*args, **kwargs)
-                except (requests.exceptions.RequestException, ConnectionError) as e:
-                    last_exception = e
-                    if attempt < max_retries - 1:
-                        time.sleep(delay * (2 ** attempt))
-                        continue
-            raise last_exception
+                except exceptions as e:
+                    attempt += 1
+                    if attempt >= retries:
+                        logger.error(f"Failed {func.__name__} after {retries} attempts: {e}")
+                        raise e
+                    
+                    # Exponential backoff with jitter to prevent thundering herd
+                    jitter = random.uniform(0.5, 1.5)
+                    sleep_time = current_delay * jitter
+                    logger.warning(
+                        f"Attempt {attempt} failed for {func.__name__}: {e}. "
+                        f"Retrying in {sleep_time:.2f} seconds..."
+                    )
+                    time.sleep(sleep_time)
+                    current_delay *= 2
+            
+            return func(*args, **kwargs)
         return wrapper
     return decorator
-
-@retry_request(max_retries=3, delay=1.0)
-def fetch_roblox_api(url: str, session: requests.Session):
-    """Fetches data from Roblox API endpoints with retry support."""
-    response = session.get(url, timeout=10)
-    response.raise_for_status()
-    return response.json()
