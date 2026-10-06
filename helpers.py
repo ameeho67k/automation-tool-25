@@ -1,53 +1,56 @@
 import time
+import random
 import logging
-from functools import wraps
 from typing import Callable, Any, Tuple
 import requests
 
-logger = logging.getLogger("roblox_automation")
+logger = logging.getLogger("automation-tool.helpers")
 
-RETRYABLE_STATUS_CODES: Tuple[int, ...] = (429, 500, 502, 503, 504)
-
-def retry_network_op(
-    max_retries: int = 3,
-    backoff_factor: float = 1.5,
-    retryable_status_codes: Tuple[int, ...] = RETRYABLE_STATUS_CODES
+def retry_on_failure(
+    max_retries: int = 5,
+    backoff_factor: float = 2.0,
+    status_to_retry: Tuple[int, ...] = (429, 500, 502, 503, 504)
 ) -> Callable:
     """
-    Decorator to retry failed Roblox HTTP requests with exponential backoff
-    and automatic handling of rate limits (429 status).
+    Decorator to retry Roblox API calls on transient errors or rate limits (HTTP 429).
+    Includes exponential backoff with randomized jitter.
     """
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+    def decorator(func: Callable[..., requests.Response]) -> Callable[..., requests.Response]:
+        def wrapper(*args: Any, **kwargs: Any) -> requests.Response:
             retries = 0
-            delay = 1.0
-
             while True:
                 try:
                     response = func(*args, **kwargs)
-                    if isinstance(response, requests.Response):
-                        if response.status_code in retryable_status_codes:
-                            response.raise_for_status()
+                    
+                    # Check if status code matches retryable conditions
+                    if response.status_code in status_to_retry:
+                        # Handle rate limiting dynamically if the header is available
+                        if response.status_code == 429:
+                            retry_after = response.headers.get("Retry-After")
+                            if retry_after and retry_after.isdigit():
+                                wait_time = float(retry_after) + random.uniform(0.5, 1.5)
+                                logger.warning(f"Roblox rate limit hit. Waiting {wait_time:.2f}s based on response header.")
+                                time.sleep(wait_time)
+                                continue
+                        
+                        raise requests.exceptions.HTTPError(
+                            f"Transient error {response.status_code}", 
+                            response=response
+                        )
+                        
                     return response
-                except (requests.RequestException, requests.HTTPError) as exc:
+                except (requests.exceptions.RequestException, requests.exceptions.ConnectionError) as err:
                     retries += 1
                     if retries > max_retries:
-                        logger.error(f"Roblox API operation '{func.__name__}' failed after {max_retries} retries: {exc}")
-                        raise exc
+                        logger.error(f"Roblox API request failed permanently after {max_retries} attempts.")
+                        raise err
 
-                    current_delay = delay
-                    # Check for Roblox rate-limit Retry-After header
-                    if hasattr(exc, 'response') and exc.response is not None:
-                        retry_after = exc.response.headers.get("Retry-After")
-                        if retry_after and retry_after.isdigit():
-                            current_delay = float(retry_after)
-
+                    # Compute exponential backoff with random jitter
+                    sleep_time = (backoff_factor ** retries) + random.uniform(0.1, 1.0)
                     logger.warning(
-                        f"Network issue in '{func.__name__}': {exc}. Retrying in {current_delay:.2f}s (Attempt {retries}/{max_retries})"
+                        f"Network operational delay ({err}). Retrying in {sleep_time:.2f} seconds... "
+                        f"(Attempt {retries}/{max_retries})"
                     )
-                    time.sleep(current_delay)
-                    delay *= backoff_factor
-
+                    time.sleep(sleep_time)
         return wrapper
     return decorator
