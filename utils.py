@@ -1,37 +1,34 @@
-import time
-import random
+import os
+import shutil
 import logging
+from typing import List
 
-# Roblox automation helper utilities
+# Configure logger for automation-tool-25
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('automation-tool-25')
 
-def get_random_delay(min_ms=500, max_ms=2000):
-    """Generates a human-like delay between actions."""
-    delay = random.uniform(min_ms, max_ms) / 1000
-    time.sleep(delay)
-    return delay
+def clean_temp_directories(directories: List[str]) -> None:
+    """Removes temporary artifact directories to maintain workspace."""
+    for path in directories:
+        if os.path.exists(path):
+            try:
+                shutil.rmtree(path)
+                logger.info(f"Successfully cleaned: {path}")
+            except OSError as e:
+                logger.error(f"Error deleting {path}: {e}")
 
-def format_roblox_timestamp(timestamp=None):
-    """Formats unix epoch for roblox api logs."""
-    if timestamp is None:
-        timestamp = time.time()
-    return time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(timestamp))
+def organize_workspace(root: str, extensions: List[str]) -> None:
+    """Reorganizes files by extension into subdirectory folders."""
+    if not os.path.exists(root):
+        return
+    
+    for item in os.listdir(root):
+        ext = os.path.splitext(item)[1].lower()
+        if ext in extensions:
+            target_dir = os.path.join(root, ext[1:] or 'no_ext')
+            os.makedirs(target_dir, exist_ok=True)
+            shutil.move(os.path.join(root, item), os.path.join(target_dir, item))
 
-def validate_game_id(game_id):
-    """Checks if provided string is a valid numeric ID."""
-    return str(game_id).isdigit() and len(str(game_id)) >= 8
-
-def retry_operation(func, retries=3, delay=2):
-    """Generic retry wrapper for unstable network requests."""
-    for i in range(retries):
-        try:
-            return func()
-        except Exception as e:
-            logging.warning(f"Attempt {i+1} failed: {e}")
-            if i == retries - 1:
-                raise
-            time.sleep(delay * (i + 1))
-
-def chunk_list(data, size=50):
-    """Splits large player lists into manageable chunks."""
-    for i in range(0, len(data), size):
-        yield data[i:i + size]
+def validate_roblox_path(path: str) -> bool:
+    """Verifies existence and accessibility of roblox directory."""
+    return os.path.isdir(path) and os.access(path, os.W_OK)
