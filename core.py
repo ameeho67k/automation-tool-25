@@ -1,34 +1,47 @@
-import json
-from typing import Any, Dict, Optional
+import asyncio
+import time
+from typing import List, Dict, Any, Callable, Optional
 
-class RobloxDataHandler:
-    """Utility for processing Roblox Datastore JSON payloads."""
 
-    @staticmethod
-    def serialize(data: Any) -> str:
-        """Encodes python objects to Roblox-compatible JSON strings."""
-        try:
-            return json.dumps(data, separators=(',', ':'))
-        except (TypeError, ValueError) as e:
-            raise ValueError(f"failed to serialize data: {e}")
+class TaskProcessor:
+    """Core processor for asynchronous automation tasks with batching and caching."""
 
-    @staticmethod
-    def deserialize(payload: str) -> Optional[Dict[str, Any]]:
-        """Parses incoming Roblox Datastore JSON responses."""
-        if not payload:
-            return None
-        return json.loads(payload)
+    def __init__(self, max_concurrent_tasks: int = 10):
+        self.max_concurrent_tasks = max_concurrent_tasks
+        self.semaphore = asyncio.Semaphore(max_concurrent_tasks)
+        self._cache: Dict[str, Any] = {}
+        self._cache_ttl: Dict[str, float] = {}
 
-    @staticmethod
-    def sanitize_key(key: str) -> str:
-        """Ensures datastore keys meet Roblox naming constraints."""
-        return "".join(char for char in key if char.isalnum() or char in "-_/")
+    def set_cache(self, key: str, value: Any, ttl: float = 60.0) -> None:
+        self._cache[key] = value
+        self._cache_ttl[key] = time.time() + ttl
 
-    @classmethod
-    def format_datastore_payload(cls, data: Dict[str, Any], key: str) -> Dict[str, Any]:
-        """Structures data for web API transmission."""
-        return {
-            "target": cls.sanitize_key(key),
-            "body": cls.serialize(data),
-            "timestamp": "auto"
-        }
+    def get_cache(self, key: str) -> Optional[Any]:
+        if key in self._cache:
+            if time.time() < self._cache_ttl[key]:
+                return self._cache[key]
+            del self._cache[key]
+            del self._cache_ttl[key]
+        return None
+
+    async def execute_task(self, task_id: str, func: Callable, *args, **kwargs) -> Any:
+        cached_result = self.get_cache(task_id)
+        if cached_result is not None:
+            return cached_result
+
+        async with self.semaphore:
+            if asyncio.iscoroutinefunction(func):
+                result = await func(*args, **kwargs)
+            else:
+                loop = asyncio.get_running_loop()
+                result = await loop.run_in_executor(None, func, *args)
+            
+            self.set_cache(task_id, result)
+            return result
+
+    async def process_batch(self, tasks: List[Dict[str, Any]]) -> List[Any]:
+        coroutines = [
+            self.execute_task(t["id"], t["func"], *t.get("args", []), **t.get("kwargs", {}))
+            for t in tasks
+        ]
+        return await asyncio.gather(*coroutines, return_exceptions=True)
