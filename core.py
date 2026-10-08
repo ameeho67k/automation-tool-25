@@ -1,47 +1,34 @@
-import time
-import logging
-from typing import Dict, Any
+import json
+from typing import Any, Dict, Optional
 
-# Configure basic logger for automation-tool-25
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('automation-tool-25')
+class RobloxDataHandler:
+    """Utility for processing Roblox Datastore JSON payloads."""
 
-def validate_roblox_input(data: Dict[str, Any]) -> bool:
-    """Ensures incoming data contains required keys for processing."""
-    required = {'user_id', 'action_type', 'timestamp'}
-    return all(key in data for key in required)
-
-def main_processing_loop(queue):
-    """Main orchestration loop for roblox automation tasks."""
-    logger.info("Starting roblox automation engine...")
-    
-    while True:
-        task = queue.get()
-        
-        if not validate_roblox_input(task):
-            logger.error(f"Invalid task structure detected: {task}")
-            continue
-            
+    @staticmethod
+    def serialize(data: Any) -> str:
+        """Encodes python objects to Roblox-compatible JSON strings."""
         try:
-            process_task(task)
-        except Exception as e:
-            logger.error(f"Task execution failure: {e}")
-        
-        time.sleep(1)
+            return json.dumps(data, separators=(',', ':'))
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"failed to serialize data: {e}")
 
-def process_task(task: Dict[str, Any]):
-    """Handles individual roblox API interactions."""
-    uid = task['user_id']
-    action = task['action_type']
-    logger.info(f"Processing {action} for Roblox user {uid}")
+    @staticmethod
+    def deserialize(payload: str) -> Optional[Dict[str, Any]]:
+        """Parses incoming Roblox Datastore JSON responses."""
+        if not payload:
+            return None
+        return json.loads(payload)
 
-if __name__ == '__main__':
-    # Mock queue for demonstration purposes
-    from queue import Queue
-    mock_queue = Queue()
-    mock_queue.put({'user_id': 12345, 'action_type': 'trade', 'timestamp': time.time()})
-    
-    try:
-        main_processing_loop(mock_queue)
-    except KeyboardInterrupt:
-        logger.info("Shutdown signal received.")
+    @staticmethod
+    def sanitize_key(key: str) -> str:
+        """Ensures datastore keys meet Roblox naming constraints."""
+        return "".join(char for char in key if char.isalnum() or char in "-_/")
+
+    @classmethod
+    def format_datastore_payload(cls, data: Dict[str, Any], key: str) -> Dict[str, Any]:
+        """Structures data for web API transmission."""
+        return {
+            "target": cls.sanitize_key(key),
+            "body": cls.serialize(data),
+            "timestamp": "auto"
+        }
