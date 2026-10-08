@@ -1,41 +1,28 @@
-"""Custom exceptions for the Roblox automation tool.
+import time
+import functools
+import logging
 
-This module defines specific exceptions raised during Roblox API interaction, 
-authentication, and asset data parsing.
-"""
+logger = logging.getLogger(__name__)
 
-class RobloxAutomationError(Exception):
-    """Base exception for all errors within automation-tool-25."""
-    def __init__(self, message: str = "An unknown Roblox automation error occurred."):
-        super().__init__(message)
-        self.message = message
+class NetworkRetryError(Exception):
+    """Custom exception for network operation failures."""
+    pass
 
-
-class RobloxAPIError(RobloxAutomationError):
-    """Raised when a Roblox API request returns a non-200 status code."""
-    def __init__(self, status_code: int, endpoint: str, response_text: str):
-        self.status_code = status_code
-        self.endpoint = endpoint
-        self.response_text = response_text
-        detailed_message = f"HTTP {status_code} on {endpoint}: {response_text[:100]}"
-        super().__init__(detailed_message)
-
-
-class InvalidCookieError(RobloxAutomationError):
-    """Raised when the provided .ROBLOSECURITY token is invalid or expired."""
-    def __init__(self, message: str = "The provided Roblox cookie is expired or unauthorized."):
-        super().__init__(message)
-
-
-class RateLimitExceededError(RobloxAPIError):
-    """Raised when Roblox API returns HTTP 429 (Too Many Requests)."""
-    def __init__(self, endpoint: str, retry_after: int = 60):
-        self.retry_after = retry_after
-        super().__init__(status_code=429, endpoint=endpoint, response_text=f"Rate limit reached. Retry after {retry_after}s.")
-
-
-class AssetHandlingError(RobloxAutomationError):
-    """Raised when reading, downloading, or writing Roblox asset data fails."""
-    def __init__(self, asset_id: int, reason: str):
-        self.asset_id = asset_id
-        super().__init__(f"Failed processing asset {asset_id}: {reason}")
+def with_retry(max_attempts=3, delay=2):
+    """Decorator to retry network functions on failure."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    logger.warning(f"Attempt {attempt} failed: {e}. Retrying...")
+                    if attempt < max_attempts:
+                        time.sleep(delay)
+            logger.error(f"Operation failed after {max_attempts} attempts.")
+            raise NetworkRetryError(f"Failed after {max_attempts} attempts: {last_exception}")
+        return wrapper
+    return decorator
