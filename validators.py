@@ -1,36 +1,34 @@
 import re
-from typing import Union
 
-USERNAME_REGEX = re.compile(r"^(?!_)(?!.*__)[a-zA-Z0-9_]{3,20}(?<!_)$")
+class RobloxInputValidator:
+    """Utility to validate Roblox-specific inputs."""
 
+    ROBLOX_ID_PATTERN = re.compile(r'^\d+$')
+    ASSET_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_\s]{3,50}$')
 
-def validate_roblox_username(username: str) -> bool:
-    """Validates if a string conforms to Roblox username rules."""
-    if not isinstance(username, str):
-        return False
-    return bool(USERNAME_REGEX.match(username))
+    @staticmethod
+    def validate_id(roblox_id: str) -> bool:
+        """Checks if provided string is a valid numeric ID."""
+        return bool(RobloxInputValidator.ROBLOX_ID_PATTERN.match(str(roblox_id)))
 
+    @staticmethod
+    def validate_asset_name(name: str) -> bool:
+        """Validates asset naming conventions for safety."""
+        return bool(RobloxInputValidator.ASSET_NAME_PATTERN.match(name))
 
-def validate_roblox_id(identifier: Union[int, str]) -> bool:
-    """Validates if a Roblox ID (User ID or Asset ID) is a valid positive integer."""
-    if isinstance(identifier, int):
-        return identifier > 0
-    if isinstance(identifier, str):
-        if not identifier.isdigit():
+    @classmethod
+    def sanitize_input(cls, user_input: str) -> str:
+        """Strips dangerous characters from user input."""
+        return re.sub(r'[^a-zA-Z0-9_\s]', '', user_input).strip()
+
+def validate_payload(data: dict) -> bool:
+    """Batch validation logic for tool configurations."""
+    required_fields = ['asset_id', 'script_name']
+    for field in required_fields:
+        if field not in data:
             return False
-        if identifier.startswith("0") and len(identifier) > 1:
-            return False
-        try:
-            return int(identifier) > 0
-        except ValueError:
-            return False
-    return False
-
-
-def validate_cookie_format(cookie: str) -> bool:
-    """Checks if a string resembles a typical Roblox .ROBLOSECURITY cookie format."""
-    if not isinstance(cookie, str):
-        return False
-    # Roblox security cookies almost always contain this warning prefix
-    warning_prefix = "_|WARNING:-DO-NOT-SHARE-THIS."
-    return warning_prefix in cookie
+    
+    return (
+        RobloxInputValidator.validate_id(data['asset_id']) and
+        RobloxInputValidator.validate_asset_name(data['script_name'])
+    )
