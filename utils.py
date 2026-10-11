@@ -1,34 +1,37 @@
-import os
-import shutil
 import logging
-from typing import List
+from typing import Any, Callable, Optional
 
-# Configure logger for automation-tool-25
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('automation-tool-25')
 
-def clean_temp_directories(directories: List[str]) -> None:
-    """Removes temporary artifact directories to maintain workspace."""
-    for path in directories:
-        if os.path.exists(path):
-            try:
-                shutil.rmtree(path)
-                logger.info(f"Successfully cleaned: {path}")
-            except OSError as e:
-                logger.error(f"Error deleting {path}: {e}")
+class RobloxAutomationError(Exception):
+    """Base exception for roblox automation tasks."""
+    pass
 
-def organize_workspace(root: str, extensions: List[str]) -> None:
-    """Reorganizes files by extension into subdirectory folders."""
-    if not os.path.exists(root):
-        return
+def execute_with_retry(func: Callable, retries: int = 3, *args, **kwargs) -> Any:
+    """Executes a given function with simple retry logic for network stability."""
+    last_exception = None
     
-    for item in os.listdir(root):
-        ext = os.path.splitext(item)[1].lower()
-        if ext in extensions:
-            target_dir = os.path.join(root, ext[1:] or 'no_ext')
-            os.makedirs(target_dir, exist_ok=True)
-            shutil.move(os.path.join(root, item), os.path.join(target_dir, item))
+    for attempt in range(retries):
+        try:
+            return func(*args, **kwargs)
+        except (ConnectionError, TimeoutError) as e:
+            last_exception = e
+            logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying...")
+        except Exception as e:
+            logger.error(f"Critical failure during execution: {e}")
+            raise RobloxAutomationError(f"Operation failed after {attempt + 1} attempts") from e
+            
+    raise RobloxAutomationError(f"Max retries exceeded: {last_exception}")
 
-def validate_roblox_path(path: str) -> bool:
-    """Verifies existence and accessibility of roblox directory."""
-    return os.path.isdir(path) and os.access(path, os.W_OK)
+def validate_response(data: Optional[dict], keys: list) -> bool:
+    """Checks if required keys exist in the roblox API response."""
+    if not data:
+        logger.error("Received empty or null data from API")
+        return False
+        
+    missing = [key for key in keys if key not in data]
+    if missing:
+        logger.error(f"Response missing keys: {missing}")
+        return False
+        
+    return True
