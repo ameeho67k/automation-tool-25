@@ -1,34 +1,44 @@
-import re
+import logging
 
-class RobloxInputValidator:
-    """Utility to validate Roblox-specific inputs."""
+logger = logging.getLogger(__name__)
 
-    ROBLOX_ID_PATTERN = re.compile(r'^\d+$')
-    ASSET_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_\s]{3,50}$')
+class ValidationError(Exception):
+    """Custom exception for roblox automation validation errors."""
+    pass
 
-    @staticmethod
-    def validate_id(roblox_id: str) -> bool:
-        """Checks if provided string is a valid numeric ID."""
-        return bool(RobloxInputValidator.ROBLOX_ID_PATTERN.match(str(roblox_id)))
+def validate_roblox_id(asset_id: str) -> int:
+    """Verifies asset ID format and type."""
+    try:
+        if not asset_id:
+            raise ValidationError("Asset ID cannot be empty")
+        
+        parsed_id = int(asset_id)
+        if parsed_id <= 0:
+            raise ValidationError("Asset ID must be positive")
+        return parsed_id
+    except ValueError:
+        logger.error(f"Invalid asset ID format provided: {asset_id}")
+        raise ValidationError("Asset ID must be a numeric string")
 
-    @staticmethod
-    def validate_asset_name(name: str) -> bool:
-        """Validates asset naming conventions for safety."""
-        return bool(RobloxInputValidator.ASSET_NAME_PATTERN.match(name))
-
-    @classmethod
-    def sanitize_input(cls, user_input: str) -> str:
-        """Strips dangerous characters from user input."""
-        return re.sub(r'[^a-zA-Z0-9_\s]', '', user_input).strip()
-
-def validate_payload(data: dict) -> bool:
-    """Batch validation logic for tool configurations."""
-    required_fields = ['asset_id', 'script_name']
-    for field in required_fields:
-        if field not in data:
-            return False
+def validate_session_data(data: dict) -> bool:
+    """Checks session configuration integrity."""
+    required_keys = ['cookie', 'user_id']
     
-    return (
-        RobloxInputValidator.validate_id(data['asset_id']) and
-        RobloxInputValidator.validate_asset_name(data['script_name'])
-    )
+    for key in required_keys:
+        if key not in data:
+            logger.warning(f"Missing session configuration key: {key}")
+            return False
+            
+    if not data['cookie'].startswith('_|WARNING:-DO-NOT-SHARE-THIS'):
+        logger.warning("Suspicious or malformed roblox cookie detected")
+        return False
+        
+    return True
+
+def safe_execute(func, *args, **kwargs):
+    """Wrapper for handling routine execution failures."""
+    try:
+        return func(*args, **kwargs)
+    except Exception as e:
+        logger.critical(f"Execution failure in {func.__name__}: {str(e)}")
+        return None
