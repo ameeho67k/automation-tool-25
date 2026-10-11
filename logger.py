@@ -1,45 +1,36 @@
 import logging
-import os
 from logging.handlers import RotatingFileHandler
+import os
 
-
-def setup_logger(
-    name: str = "roblox_automation",
-    log_file: str = "logs/bot.log",
-    level: int = logging.INFO,
-    max_bytes: int = 5 * 1024 * 1024,
-    backup_count: int = 5,
-) -> logging.Logger:
-    """Configures and returns a rotating file and console logger for Roblox automation tasks."""
+def setup_logger(name: str, log_file: str = 'automation.log', level=logging.INFO):
+    """Initializes a rotating file logger for automation tasks."""
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    if logger.handlers:
-        return logger
+    # Prevent duplicate handlers if logger is re-initialized
+    if logger.hasHandlers():
+        logger.handlers.clear()
 
-    log_dir = os.path.dirname(log_file)
-    if log_dir:
-        os.makedirs(log_dir, exist_ok=True)
+    # Setup rotation: 5MB per file, keep 3 backups
+    handler = RotatingFileHandler(
+        log_file, 
+        maxBytes=5 * 1024 * 1024, 
+        backupCount=3
+    )
 
     formatter = logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
+    handler.setFormatter(formatter)
 
-    file_handler = RotatingFileHandler(
-        log_file, maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8"
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(level)
-
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    logger.addHandler(handler)
+    
+    # Optional console output
+    console = logging.StreamHandler()
+    console.setFormatter(formatter)
+    logger.addHandler(console)
 
     return logger
 
-
-logger = setup_logger()
+# Instantiate default logger for automation-tool-25
+logger = setup_logger('roblox_bot')
