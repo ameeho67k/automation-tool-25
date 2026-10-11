@@ -1,34 +1,35 @@
 import os
 
-# Roblox API and Environment Constants
-ROBLOX_API_BASE = "https://apis.roblox.com"
-AUTH_HEADER_KEY = "X-CSRF-TOKEN"
-USER_AGENT = "automation-tool-25/1.0.0 (Roblox Automation)"
-
-# Retry Configuration
+# Roblox automation configurations and system constants
+ROBLOX_PROCESS_NAME = "RobloxPlayerBeta.exe"
 MAX_RETRIES = 3
-RETRY_DELAY_SECONDS = 2
+RETRY_DELAY_SECONDS = 2.0
 
-# File System Paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_DIR = os.path.join(BASE_DIR, "logs")
-DATA_DIR = os.path.join(BASE_DIR, "data")
+# API endpoints and memory addresses
+API_BASE_URL = "https://apis.roblox.com"
+MEMORY_OFFSET_BASE = 0x400000
 
-# Automation Thresholds
-MIN_SLEEP_INTERVAL = 0.5
-MAX_SLEEP_INTERVAL = 2.5
-BATCH_SIZE = 50
+# Error handling constants
+TIMEOUT_THRESHOLD = 30.0
+POLL_RATE_HZ = 10
 
-# Supported Error Codes
-ERR_RATE_LIMITED = 429
-ERR_UNAUTHORIZED = 401
-ERR_FORBIDDEN = 403
+# Path validations
+EXECUTABLE_PATH = os.getenv("ROBLOX_PATH", "C:\\Program Files (x86)\\Roblox\\Versions")
 
-# Initialization check
-def validate_paths():
-    """Ensures internal directories exist for application runtime."""
-    for directory in [LOG_DIR, DATA_DIR]:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+class AutomationConstants:
+    """Static configuration class for environment and system parameters."""
+    @classmethod
+    def get_retry_config(cls):
+        return {
+            "max_retries": MAX_RETRIES,
+            "delay": RETRY_DELAY_SECONDS,
+            "timeout": TIMEOUT_THRESHOLD
+        }
 
-validate_paths()
+# Standard error messages for edge cases
+ERROR_MESSAGES = {
+    "PROCESS_NOT_FOUND": "Target Roblox process could not be identified",
+    "MEMORY_ACCESS_DENIED": "Insufficient permissions for memory manipulation",
+    "CONNECTION_LOST": "Network connectivity to Roblox services interrupted",
+    "TIMEOUT_EXCEEDED": "Operation timed out after reaching threshold"
+}
