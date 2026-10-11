@@ -1,40 +1,46 @@
 import json
 import os
-from typing import Any, Dict
+import logging
 
+# Roblox automation tool configuration management
 DEFAULT_CONFIG = {
-    "roblosecurity_token": "",
-    "target_game_id": 123456789,
-    "retry_delay": 5.0,
-    "headless_mode": True,
-    "proxy_url": None
+    "place_id": 0,
+    "auth_token": "",
+    "retry_limit": 3,
+    "timeout": 30
 }
 
-def load_config(filepath: str = "config.json") -> Dict[str, Any]:
-    """
-    Loads configuration from a JSON file, merging with default values.
-    """
-    config = DEFAULT_CONFIG.copy()
-    
+def load_config(filepath: str) -> dict:
+    """Loads and validates configuration from a JSON file."""
     if not os.path.exists(filepath):
-        save_config(config, filepath)
+        logging.warning(f"Config file {filepath} not found. Using defaults.")
+        return DEFAULT_CONFIG
+
+    try:
+        with open(filepath, 'r') as f:
+            config = json.load(f)
+            
+        # Validate presence of required keys
+        if not isinstance(config, dict):
+            raise ValueError("Invalid config format: expected dictionary")
+            
+        # Ensure basic schema consistency
+        for key in DEFAULT_CONFIG:
+            if key not in config:
+                config[key] = DEFAULT_CONFIG[key]
+        
         return config
 
-    try:
-        with open(filepath, "r") as f:
-            user_config = json.load(f)
-            config.update(user_config)
-    except (json.JSONDecodeError, IOError):
-        pass
-        
-    return config
+    except (json.JSONDecodeError, IOError, ValueError) as e:
+        logging.error(f"Failed to load config: {e}. Falling back to defaults.")
+        return DEFAULT_CONFIG
 
-def save_config(config: Dict[str, Any], filepath: str = "config.json") -> None:
-    """
-    Persists the current configuration dictionary to disk.
-    """
+def save_config(filepath: str, data: dict) -> bool:
+    """Saves configuration securely to disk."""
     try:
-        with open(filepath, "w") as f:
-            json.dump(config, f, indent=4)
-    except IOError as e:
-        print(f"Failed to save configuration: {e}")
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=4)
+        return True
+    except (IOError, TypeError) as e:
+        logging.error(f"Critical failure saving config: {e}")
+        return False
