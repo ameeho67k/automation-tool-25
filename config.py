@@ -1,46 +1,50 @@
 import json
 import os
-import logging
+from typing import Dict, Any
 
-# Roblox automation tool configuration management
-DEFAULT_CONFIG = {
-    "place_id": 0,
-    "auth_token": "",
-    "retry_limit": 3,
-    "timeout": 30
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "roblox_cookie": "",
+    "request_timeout": 10,
+    "max_retries": 3,
+    "rate_limit_delay": 1.5,
+    "webhook_url": "",
+    "headless_mode": True,
+    "user_agent": "RobloxAutomation/1.0"
 }
 
-def load_config(filepath: str) -> dict:
-    """Loads and validates configuration from a JSON file."""
-    if not os.path.exists(filepath):
-        logging.warning(f"Config file {filepath} not found. Using defaults.")
-        return DEFAULT_CONFIG
+class ConfigLoader:
+    """Handles loading, validating, and saving config settings for Roblox automation."""
 
-    try:
-        with open(filepath, 'r') as f:
-            config = json.load(f)
-            
-        # Validate presence of required keys
-        if not isinstance(config, dict):
-            raise ValueError("Invalid config format: expected dictionary")
-            
-        # Ensure basic schema consistency
-        for key in DEFAULT_CONFIG:
-            if key not in config:
-                config[key] = DEFAULT_CONFIG[key]
+    def __init__(self, config_path: str = "config.json"):
+        self.config_path = config_path
+        self.config: Dict[str, Any] = self.load_config()
+
+    def load_config(self) -> Dict[str, Any]:
+        """Loads configuration from file and fills missing fields with defaults."""
+        config = DEFAULT_CONFIG.copy()
         
+        if os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    file_config = json.load(f)
+                    if isinstance(file_config, dict):
+                        config.update(file_config)
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"[Warning] Failed to load {self.config_path}, using defaults: {e}")
+        else:
+            self.save_config(config)
+
         return config
 
-    except (json.JSONDecodeError, IOError, ValueError) as e:
-        logging.error(f"Failed to load config: {e}. Falling back to defaults.")
-        return DEFAULT_CONFIG
+    def save_config(self, config_data: Dict[str, Any] = None) -> None:
+        """Saves current configuration to a JSON file."""
+        data_to_save = config_data if config_data is not None else self.config
+        try:
+            with open(self.config_path, "w", encoding="utf-8") as f:
+                json.dump(data_to_save, f, indent=4)
+        except OSError as e:
+            print(f"[Error] Failed to save configuration: {e}")
 
-def save_config(filepath: str, data: dict) -> bool:
-    """Saves configuration securely to disk."""
-    try:
-        with open(filepath, 'w') as f:
-            json.dump(data, f, indent=4)
-        return True
-    except (IOError, TypeError) as e:
-        logging.error(f"Critical failure saving config: {e}")
-        return False
+    def get(self, key: str, default: Any = None) -> Any:
+        """Retrieves a specific configuration option."""
+        return self.config.get(key, default)
