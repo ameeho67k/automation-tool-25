@@ -1,35 +1,43 @@
-import functools
 import logging
 
-# Cache for repetitive Roblox API data queries
-CACHE = {}
+# Configure basic logging for automation-tool-25
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('automation-tool-25')
 
-class DataProcessor:
-    def __init__(self, limit=1000):
-        self.limit = limit
-        self.logger = logging.getLogger('automation-tool-25')
+def validate_input(data):
+    """Ensures input matches expected roblox automation schema."""
+    required_fields = ['job_id', 'target_user', 'action_type']
+    if not isinstance(data, dict):
+        return False
+    return all(field in data for field in required_fields)
 
-    @functools.lru_cache(maxsize=128)
-    def fetch_user_metadata(self, user_id: int) -> dict:
-        """Cached fetch for user metadata to minimize API load."""
-        return {"id": user_id, "status": "active", "verified": True}
+def run_processing_loop(task_queue):
+    """Main loop for processing roblox automation tasks."""
+    logger.info("Starting roblox automation processor...")
+    
+    while True:
+        task = task_queue.get()
+        if task is None:
+            break
+            
+        if not validate_input(task):
+            logger.error(f"Invalid task format received: {task}")
+            continue
+            
+        try:
+            execute_task(task)
+        except Exception as e:
+            logger.error(f"Execution error on job {task.get('job_id')}: {e}")
+            
+        task_queue.task_done()
 
-    def batch_process_entities(self, entities: list) -> list:
-        """
-        Processes entity lists using a generator to conserve memory
-        and list comprehensions for speed during automation cycles.
-        """
-        if len(entities) > self.limit:
-            self.logger.warning(f"Batch size {len(entities)} exceeds recommended limit")
+def execute_task(task):
+    """Logic for executing the validated roblox task."""
+    logger.info(f"Processing job {task['job_id']} for {task['target_user']}")
 
-        processed = [e for e in entities if e.get("active")]
-        return processed
-
-    def clear_cache(self):
-        """Clears memory for system refresh cycles."""
-        self.fetch_user_metadata.cache_clear()
-        self.logger.info("Cache cleared successfully")
-
-def execute_optimized_routine(data_list: list):
-    processor = DataProcessor()
-    return processor.batch_process_entities(data_list)
+if __name__ == '__main__':
+    import queue
+    q = queue.Queue()
+    q.put({'job_id': 101, 'target_user': 'RobloxUser', 'action_type': 'fetch_data'})
+    q.put(None)
+    run_processing_loop(q)
