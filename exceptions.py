@@ -1,28 +1,30 @@
-import time
-import functools
-import logging
-
-logger = logging.getLogger(__name__)
-
-class NetworkRetryError(Exception):
-    """Custom exception for network operation failures."""
+class AutomationError(Exception):
+    """Base exception for all automation-tool-25 errors."""
     pass
 
-def with_retry(max_attempts=3, delay=2):
-    """Decorator to retry network functions on failure."""
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            last_exception = None
-            for attempt in range(1, max_attempts + 1):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    last_exception = e
-                    logger.warning(f"Attempt {attempt} failed: {e}. Retrying...")
-                    if attempt < max_attempts:
-                        time.sleep(delay)
-            logger.error(f"Operation failed after {max_attempts} attempts.")
-            raise NetworkRetryError(f"Failed after {max_attempts} attempts: {last_exception}")
-        return wrapper
-    return decorator
+class RobloxSessionError(AutomationError):
+    """Raised when the Roblox API session is invalid."""
+    pass
+
+class RateLimitExceeded(AutomationError):
+    """Raised when hitting Roblox server rate limits."""
+    def __init__(self, retry_after: int):
+        self.retry_after = retry_after
+        super().__init__(f"Rate limit exceeded. Retry after {retry_after}s")
+
+class ExecutionTimeoutError(AutomationError):
+    """Raised when a script execution exceeds threshold."""
+    pass
+
+class ResourceValidationError(AutomationError):
+    """Raised when input parameters fail validation."""
+    pass
+
+# Performance optimized exception hierarchy for logging
+def get_error_context(e: Exception) -> dict:
+    """Returns structured diagnostic data for exceptions."""
+    return {
+        "error_type": type(e).__name__,
+        "message": str(e),
+        "retry_delay": getattr(e, "retry_after", 0)
+    }
