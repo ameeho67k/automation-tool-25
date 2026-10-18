@@ -1,43 +1,39 @@
 import logging
 
-# Configure basic logging for automation-tool-25
+# Configure logging for automation-tool-25
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('automation-tool-25')
+logger = logging.getLogger('processor')
 
-def validate_input(data):
-    """Ensures input matches expected roblox automation schema."""
-    required_fields = ['job_id', 'target_user', 'action_type']
-    if not isinstance(data, dict):
+def validate_input(data: dict) -> bool:
+    """Validates incoming Roblox payload structure."""
+    required_keys = {'user_id', 'action', 'timestamp'}
+    if not all(k in data for k in required_keys):
+        logger.warning(f"Missing keys in payload: {data}")
         return False
-    return all(field in data for field in required_fields)
+    if not isinstance(data.get('user_id'), int):
+        logger.error("Invalid user_id type; expected integer")
+        return False
+    return True
 
-def run_processing_loop(task_queue):
-    """Main loop for processing roblox automation tasks."""
-    logger.info("Starting roblox automation processor...")
+def run_processing_loop(queue: list):
+    """Main loop for processing automation tasks."""
+    logger.info("Starting main processing loop...")
     
-    while True:
-        task = task_queue.get()
-        if task is None:
-            break
-            
+    while queue:
+        task = queue.pop(0)
+        
+        # Input validation gate
         if not validate_input(task):
-            logger.error(f"Invalid task format received: {task}")
+            logger.error("Task skipped due to validation failure")
             continue
             
         try:
-            execute_task(task)
+            # Simulate automation execution
+            logger.info(f"Processing task for user: {task['user_id']}")
+            # Execution logic would go here
         except Exception as e:
-            logger.error(f"Execution error on job {task.get('job_id')}: {e}")
-            
-        task_queue.task_done()
-
-def execute_task(task):
-    """Logic for executing the validated roblox task."""
-    logger.info(f"Processing job {task['job_id']} for {task['target_user']}")
+            logger.error(f"Task execution error: {e}")
 
 if __name__ == '__main__':
-    import queue
-    q = queue.Queue()
-    q.put({'job_id': 101, 'target_user': 'RobloxUser', 'action_type': 'fetch_data'})
-    q.put(None)
-    run_processing_loop(q)
+    mock_queue = [{'user_id': 12345, 'action': 'login', 'timestamp': 1625000000}]
+    run_processing_loop(mock_queue)
