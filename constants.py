@@ -1,35 +1,28 @@
 import os
 
-# Roblox automation configurations and system constants
-ROBLOX_PROCESS_NAME = "RobloxPlayerBeta.exe"
+# Roblox API and service endpoints
+BASE_API_URL = "https://apis.roblox.com"
+AUTH_TOKEN_HEADER = "RBX-AUTHENTICATION-TOKEN"
+
+# Configuration for automation cycles
 MAX_RETRIES = 3
-RETRY_DELAY_SECONDS = 2.0
+DEFAULT_TIMEOUT = 30
+POLLING_INTERVAL_SECONDS = 5
 
-# API endpoints and memory addresses
-API_BASE_URL = "https://apis.roblox.com"
-MEMORY_OFFSET_BASE = 0x400000
+# Environment pathing for automation-tool-25
+DATA_DIR = os.path.join(os.getcwd(), "data")
+LOGS_DIR = os.path.join(os.getcwd(), "logs")
+CACHE_DIR = os.path.join(DATA_DIR, "cache")
 
-# Error handling constants
-TIMEOUT_THRESHOLD = 30.0
-POLL_RATE_HZ = 10
+# File patterns for automation tasks
+TARGET_FILE_EXTENSIONS = (".rbxl", ".rbxm")
+IGNORE_DIRS = {"__pycache__", ".git", ".venv", "tests"}
 
-# Path validations
-EXECUTABLE_PATH = os.getenv("ROBLOX_PATH", "C:\\Program Files (x86)\\Roblox\\Versions")
+# Security and connection constants
+USER_AGENT = "RobloxAutomationTool/1.0.0 (Internal Utility)"
+SESSION_LIMIT = 5
 
-class AutomationConstants:
-    """Static configuration class for environment and system parameters."""
-    @classmethod
-    def get_retry_config(cls):
-        return {
-            "max_retries": MAX_RETRIES,
-            "delay": RETRY_DELAY_SECONDS,
-            "timeout": TIMEOUT_THRESHOLD
-        }
-
-# Standard error messages for edge cases
-ERROR_MESSAGES = {
-    "PROCESS_NOT_FOUND": "Target Roblox process could not be identified",
-    "MEMORY_ACCESS_DENIED": "Insufficient permissions for memory manipulation",
-    "CONNECTION_LOST": "Network connectivity to Roblox services interrupted",
-    "TIMEOUT_EXCEEDED": "Operation timed out after reaching threshold"
-}
+# Status codes for internal handlers
+STATUS_SUCCESS = 0
+STATUS_RETRYABLE_ERROR = 1
+STATUS_FATAL_ERROR = 2
