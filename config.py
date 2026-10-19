@@ -1,35 +1,25 @@
-import json
+from typing import Dict, Any, Optional
 import os
-from typing import Any, Dict
 
-DEFAULT_CONFIG = {
-    "roblox_user_id": 0,
-    "automation_interval": 60,
-    "headless_mode": True,
-    "proxy_list": []
-}
+class RobloxConfig:
+    """Configuration management for automation-tool-25."""
 
-class ConfigLoader:
-    def __init__(self, config_path: str = "config.json"):
-        self.config_path = config_path
+    def __init__(self, env: str = "production") -> None:
+        self.env: str = env
+        self.settings: Dict[str, Any] = {
+            "retry_limit": 3,
+            "timeout": 30.0,
+            "debug": False
+        }
 
-    def load(self) -> Dict[str, Any]:
-        """Loads config from file or returns defaults if file is missing."""
-        if not os.path.exists(self.config_path):
-            self._save_defaults()
-            return DEFAULT_CONFIG
+    def get_setting(self, key: str, default: Optional[Any] = None) -> Any:
+        """Retrieve a configuration value by key."""
+        return self.settings.get(key, default)
 
-        try:
-            with open(self.config_path, "r") as f:
-                user_config = json.load(f)
-                return {**DEFAULT_CONFIG, **user_config}
-        except (json.JSONDecodeError, IOError):
-            return DEFAULT_CONFIG
+    def load_from_env(self) -> None:
+        """Override default settings using environment variables."""
+        raw_timeout = os.getenv("ROBLOX_TIMEOUT")
+        if raw_timeout:
+            self.settings["timeout"] = float(raw_timeout)
 
-    def _save_defaults(self) -> None:
-        """Writes initial configuration file to disk."""
-        try:
-            with open(self.config_path, "w") as f:
-                json.dump(DEFAULT_CONFIG, f, indent=4)
-        except IOError as e:
-            print(f"Critical: Failed to save config: {e}")
+CONFIG = RobloxConfig()
