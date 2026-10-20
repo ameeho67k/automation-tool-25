@@ -1,39 +1,39 @@
+import time
 import logging
 
-# Configure logging for automation-tool-25
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('processor')
+# Roblox automation processing logic
+logger = logging.getLogger(__name__)
 
-def validate_input(data: dict) -> bool:
-    """Validates incoming Roblox payload structure."""
-    required_keys = {'user_id', 'action', 'timestamp'}
-    if not all(k in data for k in required_keys):
-        logger.warning(f"Missing keys in payload: {data}")
+def validate_input(data):
+    """Ensures incoming data matches expected Roblox automation schema."""
+    if not isinstance(data, dict):
         return False
-    if not isinstance(data.get('user_id'), int):
-        logger.error("Invalid user_id type; expected integer")
+    if "action_id" not in data or not isinstance(data.get("action_id"), int):
+        return False
+    if "payload" not in data or not isinstance(data.get("payload"), str):
         return False
     return True
 
-def run_processing_loop(queue: list):
-    """Main loop for processing automation tasks."""
-    logger.info("Starting main processing loop...")
+def process_loop(queue):
+    """Main processing loop for incoming task payloads."""
+    logger.info("Starting main processing loop")
     
-    while queue:
-        task = queue.pop(0)
-        
-        # Input validation gate
-        if not validate_input(task):
-            logger.error("Task skipped due to validation failure")
-            continue
-            
+    while True:
         try:
-            # Simulate automation execution
-            logger.info(f"Processing task for user: {task['user_id']}")
-            # Execution logic would go here
+            task = queue.get(timeout=1)
+            
+            # Input validation block
+            if not validate_input(task):
+                logger.warning(f"Invalid task data received: {task}")
+                continue
+            
+            # Processing logic for verified data
+            action_id = task["action_id"]
+            payload = task["payload"]
+            
+            logger.info(f"Executing action {action_id} with data: {payload}")
+            time.sleep(0.1)
+            
         except Exception as e:
-            logger.error(f"Task execution error: {e}")
-
-if __name__ == '__main__':
-    mock_queue = [{'user_id': 12345, 'action': 'login', 'timestamp': 1625000000}]
-    run_processing_loop(mock_queue)
+            logger.error(f"Unexpected error in processing loop: {e}")
+            time.sleep(5)
