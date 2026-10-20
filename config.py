@@ -1,25 +1,37 @@
-from typing import Dict, Any, Optional
+import json
 import os
+from typing import Any, Dict
 
-class RobloxConfig:
-    """Configuration management for automation-tool-25."""
+DEFAULT_CONFIG = {
+    "roblox_account_id": None,
+    "target_game_id": 123456789,
+    "polling_interval": 5.0,
+    "headless_mode": True,
+    "log_level": "INFO"
+}
 
-    def __init__(self, env: str = "production") -> None:
-        self.env: str = env
-        self.settings: Dict[str, Any] = {
-            "retry_limit": 3,
-            "timeout": 30.0,
-            "debug": False
-        }
+def load_config(filepath: str = "config.json") -> Dict[str, Any]:
+    """Loads configuration from disk with fallbacks to defaults."""
+    config = DEFAULT_CONFIG.copy()
+    
+    if not os.path.exists(filepath):
+        return config
+        
+    try:
+        with open(filepath, "r") as f:
+            user_config = json.load(f)
+            config.update(user_config)
+    except (json.JSONDecodeError, IOError):
+        pass
+        
+    return config
 
-    def get_setting(self, key: str, default: Optional[Any] = None) -> Any:
-        """Retrieve a configuration value by key."""
-        return self.settings.get(key, default)
+def save_config(config: Dict[str, Any], filepath: str = "config.json") -> None:
+    """Persists current configuration dictionary to json file."""
+    with open(filepath, "w") as f:
+        json.dump(config, f, indent=4)
 
-    def load_from_env(self) -> None:
-        """Override default settings using environment variables."""
-        raw_timeout = os.getenv("ROBLOX_TIMEOUT")
-        if raw_timeout:
-            self.settings["timeout"] = float(raw_timeout)
-
-CONFIG = RobloxConfig()
+if __name__ == "__main__":
+    # Example usage for automation tool
+    current_cfg = load_config()
+    print(f"Loaded configuration: {current_cfg}")
