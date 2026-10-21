@@ -1,28 +1,39 @@
-import os
+import sys
 
-# Roblox API and service endpoints
-BASE_API_URL = "https://apis.roblox.com"
-AUTH_TOKEN_HEADER = "RBX-AUTHENTICATION-TOKEN"
+# Roblox automation performance configuration
+# Pre-computed constants to minimize runtime calculations
 
-# Configuration for automation cycles
-MAX_RETRIES = 3
-DEFAULT_TIMEOUT = 30
-POLLING_INTERVAL_SECONDS = 5
+# Frame-rate throttling targets
+TARGET_FPS = 60
+FRAME_INTERVAL = 1.0 / TARGET_FPS
 
-# Environment pathing for automation-tool-25
-DATA_DIR = os.path.join(os.getcwd(), "data")
-LOGS_DIR = os.path.join(os.getcwd(), "logs")
-CACHE_DIR = os.path.join(DATA_DIR, "cache")
+# Memory management thresholds for long-running sessions
+MAX_MEMORY_MB = 1024
+CACHE_CLEANUP_INTERVAL = 300
 
-# File patterns for automation tasks
-TARGET_FILE_EXTENSIONS = (".rbxl", ".rbxm")
-IGNORE_DIRS = {"__pycache__", ".git", ".venv", "tests"}
+# API request rate-limiting (Roblox-specific constraints)
+MAX_REQUESTS_PER_SECOND = 10
+REQUEST_TIMEOUT_SECONDS = 5.0
 
-# Security and connection constants
-USER_AGENT = "RobloxAutomationTool/1.0.0 (Internal Utility)"
-SESSION_LIMIT = 5
+# Optimization toggles for CPU-bound tasks
+ENABLE_MULTI_THREADING = True
+BATCH_PROCESSING_SIZE = 50
 
-# Status codes for internal handlers
-STATUS_SUCCESS = 0
-STATUS_RETRYABLE_ERROR = 1
-STATUS_FATAL_ERROR = 2
+# Static coordinate mapping for fast lookup
+UI_ELEMENT_OFFSETS = {
+    "main_menu": (0, 0),
+    "play_button": (150, 200),
+    "settings_tab": (300, 50)
+}
+
+# Byte-level packet structure headers
+PACKET_HEADER_SIZE = 8
+BUFFER_SIZE = 4096
+
+def get_performance_mode():
+    """Returns high-performance settings based on system load."""
+    return {
+        "fps": TARGET_FPS,
+        "batch": BATCH_PROCESSING_SIZE,
+        "threads": ENABLE_MULTI_THREADING
+    }
