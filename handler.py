@@ -2,27 +2,24 @@ import json
 import base64
 from typing import Any, Dict, Optional
 
-def decode_roblox_data(raw_data: str) -> Optional[Dict[str, Any]]:
-    """Decodes base64 encoded Roblox JSON payloads."""
+def decode_roblox_datastore(raw_payload: str) -> Optional[Dict[str, Any]]:
+    """Decodes base64 encoded Roblox DataStore strings."""
     try:
-        # Strip potential padding or formatting issues
-        decoded = base64.b64decode(raw_data).decode('utf-8')
-        return json.loads(decoded)
-    except (json.JSONDecodeError, ValueError, TypeError) as e:
-        print(f"Data decoding failure: {e}")
+        decoded_bytes = base64.b64decode(raw_payload)
+        return json.loads(decoded_bytes.decode('utf-8'))
+    except (ValueError, KeyError, json.JSONDecodeError):
         return None
 
-def format_roblox_payload(data: Dict[str, Any]) -> str:
-    """Serializes data into standard Roblox compatible JSON."""
-    try:
-        return json.dumps(data, separators=(',', ':'))
-    except TypeError as e:
-        print(f"Payload serialization error: {e}")
-        return "{}"
+def serialize_roblox_data(data: Dict[str, Any]) -> str:
+    """Serializes Python dicts for DataStore upload."""
+    return json.dumps(data, separators=(',', ':'))
 
-def validate_datastore_key(key: str) -> bool:
-    """Checks if a key meets Roblox naming constraints."""
-    # Keys must be strings and within character limits
-    if not isinstance(key, str) or len(key) > 50:
-        return False
-    return key.isalnum() or '_' in key
+def sanitize_roblox_value(value: Any) -> Any:
+    """Enforces strict type compatibility for Roblox API."""
+    if isinstance(value, (int, float, str, bool)):
+        return value
+    if isinstance(value, list):
+        return [sanitize_roblox_value(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k): sanitize_roblox_value(v) for k, v in value.items()}
+    return str(value)
