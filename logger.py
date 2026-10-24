@@ -1,33 +1,32 @@
 import logging
-import sys
-from functools import lru_cache
+from logging.handlers import RotatingFileHandler
+import os
 
-# Configure optimized logger for roblox automation throughput
-logger = logging.getLogger('automation-tool-25')
+def setup_logger(name: str = 'automation-tool-25', log_file: str = 'app.log') -> logging.Logger:
+    """Configures a rotating file logger for the automation tool."""
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
 
-@lru_cache(maxsize=128)
-def get_logger(name: str) -> logging.Logger:
-    """Cache logger instances to minimize memory overhead"""
-    instance = logging.getLogger(name)
-    instance.setLevel(logging.INFO)
-    return instance
+    # Prevent duplicate handlers if re-initialized
+    if not logger.handlers:
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
 
-def setup_logging(level: int = logging.INFO):
-    """Initialize handler with non-blocking stream access"""
-    handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
-    handler.setFormatter(formatter)
-    
-    logger.addHandler(handler)
-    logger.setLevel(level)
+        # Rotate logs at 5MB, keep 3 historical backups
+        file_handler = RotatingFileHandler(
+            log_file, maxBytes=5*1024*1024, backupCount=3
+        )
+        file_handler.setFormatter(formatter)
 
-class PerformanceLogger:
-    """Static utility for high-frequency event logging"""
-    @staticmethod
-    def log_event(message: str):
-        """Writes log directly to output buffer"""
-        if logger.isEnabledFor(logging.INFO):
-            logger.info(message)
+        # Console output for visibility during development
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
 
-# Instantiate core logger
-setup_logging()
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+    return logger
+
+# Instantiate standard logger instance for the tool
+logger = setup_logger()
