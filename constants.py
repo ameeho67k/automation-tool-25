@@ -1,39 +1,31 @@
-import sys
+from typing import Final, Dict, List
 
-# Roblox automation performance configuration
-# Pre-computed constants to minimize runtime calculations
+# Roblox API endpoints
+API_BASE_URL: Final[str] = "https://apis.roblox.com"
+AUTH_HEADER: Final[str] = "Roblox-API-Key"
 
-# Frame-rate throttling targets
-TARGET_FPS = 60
-FRAME_INTERVAL = 1.0 / TARGET_FPS
+# Tool settings
+DEFAULT_TIMEOUT: Final[int] = 30
+MAX_RETRIES: Final[int] = 3
 
-# Memory management thresholds for long-running sessions
-MAX_MEMORY_MB = 1024
-CACHE_CLEANUP_INTERVAL = 300
+# Roblox place settings
+SUPPORTED_PLATFORMS: List[str] = ["PC", "Mobile", "Console"]
 
-# API request rate-limiting (Roblox-specific constraints)
-MAX_REQUESTS_PER_SECOND = 10
-REQUEST_TIMEOUT_SECONDS = 5.0
-
-# Optimization toggles for CPU-bound tasks
-ENABLE_MULTI_THREADING = True
-BATCH_PROCESSING_SIZE = 50
-
-# Static coordinate mapping for fast lookup
-UI_ELEMENT_OFFSETS = {
-    "main_menu": (0, 0),
-    "play_button": (150, 200),
-    "settings_tab": (300, 50)
+# Error messages for automation workflows
+ERROR_MESSAGES: Dict[str, str] = {
+    "auth_failed": "Authentication token invalid or expired.",
+    "timeout": "Request timed out while connecting to Roblox API.",
+    "rate_limited": "Too many requests; backing off."
 }
 
-# Byte-level packet structure headers
-PACKET_HEADER_SIZE = 8
-BUFFER_SIZE = 4096
+def get_retry_delay(attempt: int) -> float:
+    """
+    Calculate exponential backoff delay based on attempt number.
 
-def get_performance_mode():
-    """Returns high-performance settings based on system load."""
-    return {
-        "fps": TARGET_FPS,
-        "batch": BATCH_PROCESSING_SIZE,
-        "threads": ENABLE_MULTI_THREADING
-    }
+    Args:
+        attempt: Current retry count index.
+
+    Returns:
+        Calculated delay in seconds.
+    """
+    return float(2 ** attempt)
