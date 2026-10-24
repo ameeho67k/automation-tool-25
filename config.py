@@ -3,35 +3,41 @@ import os
 from typing import Any, Dict
 
 DEFAULT_CONFIG = {
-    "roblox_account_id": None,
-    "target_game_id": 123456789,
-    "polling_interval": 5.0,
+    "roblox_user_id": 0,
+    "automation_interval": 60,
     "headless_mode": True,
-    "log_level": "INFO"
+    "max_retries": 3
 }
 
-def load_config(filepath: str = "config.json") -> Dict[str, Any]:
-    """Loads configuration from disk with fallbacks to defaults."""
-    config = DEFAULT_CONFIG.copy()
+class ConfigLoader:
+    """Handles loading and merging of automation configurations."""
     
-    if not os.path.exists(filepath):
-        return config
-        
-    try:
-        with open(filepath, "r") as f:
-            user_config = json.load(f)
-            config.update(user_config)
-    except (json.JSONDecodeError, IOError):
-        pass
-        
-    return config
+    def __init__(self, filepath: str = "config.json"):
+        self.filepath = filepath
 
-def save_config(config: Dict[str, Any], filepath: str = "config.json") -> None:
-    """Persists current configuration dictionary to json file."""
-    with open(filepath, "w") as f:
-        json.dump(config, f, indent=4)
+    def load(self) -> Dict[str, Any]:
+        config = DEFAULT_CONFIG.copy()
+        
+        if os.path.exists(self.filepath):
+            try:
+                with open(self.filepath, "r") as f:
+                    user_data = json.load(f)
+                    config.update(user_data)
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"Warning: Failed to load config, using defaults: {e}")
+        else:
+            self._save_defaults(config)
+            
+        return config
+
+    def _save_defaults(self, config: Dict[str, Any]) -> None:
+        try:
+            with open(self.filepath, "w") as f:
+                json.dump(config, f, indent=4)
+        except IOError as e:
+            print(f"Warning: Could not create default config file: {e}")
 
 if __name__ == "__main__":
-    # Example usage for automation tool
-    current_cfg = load_config()
-    print(f"Loaded configuration: {current_cfg}")
+    loader = ConfigLoader()
+    current_config = loader.load()
+    print(f"Active config loaded: {current_config}")
