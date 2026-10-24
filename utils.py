@@ -1,50 +1,31 @@
-import time
-import logging
-from typing import Optional, List
+import json
+import base64
+from typing import Any, Dict, Optional
 
-logger = logging.getLogger('automation-tool-25')
+def decode_roblox_json(payload: str) -> Optional[Dict[str, Any]]:
+    """Decodes standard Roblox API JSON strings with error handling."""
+    try:
+        data = json.loads(payload)
+        return data
+    except (json.JSONDecodeError, TypeError):
+        return None
 
-def validate_roblox_user(user_id: int) -> bool:
-    """
-    Validates presence of a roblox user id via numeric constraint.
-    
-    Args:
-        user_id: The unique identifier for the account.
-        
-    Returns:
-        bool: True if id is valid and positive.
-    """
-    return isinstance(user_id, int) and user_id > 0
+def format_player_data(user_id: int, username: str, rank: int) -> Dict[str, Any]:
+    """Structures raw player attributes for internal processing."""
+    return {
+        "id": user_id,
+        "name": username,
+        "rank": rank,
+        "is_premium": rank > 0
+    }
 
-def format_session_data(data: List[str], prefix: str = 'rbx') -> str:
-    """
-    Aggregates session logs into a formatted string.
-    
-    Args:
-        data: List of activity logs.
-        prefix: String to prepend to the final output.
-        
-    Returns:
-        Formatted session identifier string.
-    """
-    return f"{prefix}_{'_'.join(data)}"
+def encode_session_token(data: Dict[str, Any]) -> str:
+    """Serializes dictionary data into a base64 encoded string."""
+    raw_json = json.dumps(data)
+    return base64.b64encode(raw_json.encode('utf-8')).decode('utf-8')
 
-def retry_operation(func: callable, retries: int = 3, delay: float = 1.0) -> Optional[bool]:
-    """
-    Generic retry mechanism for network-dependent roblox API calls.
-    
-    Args:
-        func: Function to execute.
-        retries: Number of attempts before failure.
-        delay: Seconds to wait between attempts.
-        
-    Returns:
-        Operation result or None if max retries exceeded.
-    """
-    for i in range(retries):
-        try:
-            return func()
-        except Exception as e:
-            logger.warning(f"Attempt {i+1} failed: {e}")
-            time.sleep(delay)
-    return None
+def validate_universe_id(universe_id: Any) -> bool:
+    """Checks if provided ID meets Roblox numeric requirements."""
+    if not isinstance(universe_id, int):
+        return False
+    return universe_id > 0
