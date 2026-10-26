@@ -1,37 +1,35 @@
-import logging
-from typing import Dict, Any
+import json
+from typing import Any, Dict, Optional
 
-logger = logging.getLogger(__name__)
+class RobloxDataHandler:
+    """Utility for formatting and validating Roblox API data structures."""
 
-class RobloxInputError(Exception):
-    """Custom exception for validation failures."""
-    pass
+    @staticmethod
+    def sanitize_metadata(data: Dict[str, Any]) -> Dict[str, Any]:
+        """Removes sensitive or unnecessary keys from API payloads."""
+        ignored_keys = {'cookie', 'csrf_token', 'internal_id'}
+        return {k: v for k, v in data.items() if k not in ignored_keys}
 
-def validate_payload(data: Dict[str, Any]) -> bool:
-    """Ensures roblox automation payload integrity."""
-    required_fields = {'user_id', 'action_type', 'target_instance'}
-    if not all(field in data for field in required_fields):
-        return False
-    if not isinstance(data.get('user_id'), int):
-        return False
-    return True
-
-def process_automation_queue(queue: list):
-    """Main processing loop with input sanitization."""
-    for item in queue:
+    @staticmethod
+    def parse_roblox_json(raw_string: str) -> Optional[Dict[str, Any]]:
+        """Safe parsing of Roblox endpoint JSON responses."""
         try:
-            if not validate_payload(item):
-                logger.warning(f"Invalid payload detected: {item}")
-                continue
-            
-            # Execution logic for roblox automation
-            user_id = item['user_id']
-            action = item['action_type']
-            logger.info(f"Processing {action} for user {user_id}")
-            
-        except Exception as e:
-            logger.error(f"Unexpected error during processing: {e}")
+            data = json.loads(raw_string)
+            if 'errors' in data:
+                return None
+            return data
+        except (json.JSONDecodeError, TypeError):
+            return None
 
-if __name__ == "__main__":
-    sample_queue = [{'user_id': 12345, 'action_type': 'click', 'target_instance': 'button_1'}]
-    process_automation_queue(sample_queue)
+    @staticmethod
+    def format_player_payload(user_id: int, place_id: int) -> str:
+        """Creates a standard payload for Roblox join requests."""
+        payload = {
+            "userId": user_id,
+            "placeId": place_id,
+            "settings": {
+                "isTeleport": True,
+                "joinSource": "automation-tool-25"
+            }
+        }
+        return json.dumps(payload)
