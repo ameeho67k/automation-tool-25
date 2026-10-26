@@ -1,32 +1,53 @@
+import os
 import logging
 from logging.handlers import RotatingFileHandler
-import os
 
-def setup_logger(name: str = 'automation-tool-25', log_file: str = 'app.log') -> logging.Logger:
-    """Configures a rotating file logger for the automation tool."""
+def setup_logger(name: str = "roblox_bot", log_dir: str = "logs", level: int = logging.INFO) -> logging.Logger:
+    """
+    Configures and returns a logger instance with stdout and rotating file handlers.
+    
+    Args:
+        name: Logger module identifier.
+        log_dir: Path to directory where log files are stored.
+        level: Minimum severity level to log.
+    """
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
 
     # Prevent duplicate handlers if re-initialized
-    if not logger.handlers:
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+    if logger.handlers:
+        return logger
 
-        # Rotate logs at 5MB, keep 3 historical backups
-        file_handler = RotatingFileHandler(
-            log_file, maxBytes=5*1024*1024, backupCount=3
-        )
-        file_handler.setFormatter(formatter)
+    # Ensure output log directory exists
+    os.makedirs(log_dir, exist_ok=True)
+    log_file_path = os.path.join(log_dir, "automation.log")
 
-        # Console output for visibility during development
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
+    # Standard format for Roblox automation tracking
+    formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
 
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
+    # Rotate logs at 5MB, keep up to 5 historical log backups
+    file_handler = RotatingFileHandler(
+        log_file_path,
+        maxBytes=5 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8"
+    )
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(level)
+
+    # Console handler for real-time task output
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(level)
+
+    # Attach handlers
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
 
     return logger
 
-# Instantiate standard logger instance for the tool
-logger = setup_logger()
+# Initialize primary logger instance for Roblox automation
+bot_logger = setup_logger()
