@@ -1,31 +1,32 @@
-from typing import Final, Dict, List
+import os
 
-# Roblox API endpoints
-API_BASE_URL: Final[str] = "https://apis.roblox.com"
-AUTH_HEADER: Final[str] = "Roblox-API-Key"
+# Roblox API configuration
+BASE_URL = "https://apis.roblox.com"
+API_KEY_HEADER = "X-API-KEY"
 
-# Tool settings
-DEFAULT_TIMEOUT: Final[int] = 30
-MAX_RETRIES: Final[int] = 3
+# Retry configuration for stability
+MAX_RETRIES = 3
+RETRY_DELAY = 2.0
 
-# Roblox place settings
-SUPPORTED_PLATFORMS: List[str] = ["PC", "Mobile", "Console"]
+# Directory and file paths for automation
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+DATA_DIR = os.path.join(BASE_DIR, "data")
 
-# Error messages for automation workflows
-ERROR_MESSAGES: Dict[str, str] = {
-    "auth_failed": "Authentication token invalid or expired.",
-    "timeout": "Request timed out while connecting to Roblox API.",
-    "rate_limited": "Too many requests; backing off."
+# Default request timeout in seconds
+REQUEST_TIMEOUT = 30
+
+# User agent for identification
+USER_AGENT = "RobloxAutomationTool/2.5.0"
+
+# Supported job categories
+JOB_TYPES = {
+    "ASSET_UPLOAD": "asset_upload",
+    "GROUP_MANAGER": "group_manager",
+    "PLAYER_ANALYTICS": "player_analytics"
 }
 
-def get_retry_delay(attempt: int) -> float:
-    """
-    Calculate exponential backoff delay based on attempt number.
-
-    Args:
-        attempt: Current retry count index.
-
-    Returns:
-        Calculated delay in seconds.
-    """
-    return float(2 ** attempt)
+# Status codes for internal processes
+STATUS_SUCCESS = 0
+STATUS_RETRY = 1
+STATUS_FATAL = 2
