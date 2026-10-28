@@ -1,35 +1,36 @@
-def validate_input(data: dict) -> bool:
-    """Validates roblox automation payload structure."""
-    required_fields = {"user_id": int, "action": str, "params": dict}
-    
-    try:
-        for field, expected_type in required_fields.items():
-            if field not in data:
-                return False
-            if not isinstance(data[field], expected_type):
-                return False
-        
-        # Ensure parameters aren't excessive for API limits
-        if len(data.get("params", {})) > 50:
-            return False
-            
-        return True
-    except (TypeError, ValueError):
-        return False
+import json
+import os
+from typing import Any, Dict
 
-def process_main_loop(queue):
-    """Main processing loop with input validation."""
-    while True:
-        task = queue.get()
-        if not task:
-            continue
-            
-        if not validate_input(task):
-            print(f"Discarding invalid task: {task}")
-            continue
-            
-        try:
-            # Simulate automation execution logic
-            print(f"Executing action {task['action']} for {task['user_id']}")
-        except Exception as e:
-            print(f"Processing error: {e}")
+DEFAULT_CONFIG = {
+    "roblox_account_id": 0,
+    "api_retries": 3,
+    "headless": True,
+    "proxy_url": None,
+    "workspace_dir": "./workspace"
+}
+
+def load_config(file_path: str = "config.json") -> Dict[str, Any]:
+    """Loads user configuration with fallback to defaults."""
+    config = DEFAULT_CONFIG.copy()
+    
+    if not os.path.exists(file_path):
+        save_config(config, file_path)
+        return config
+
+    try:
+        with open(file_path, "r") as f:
+            user_config = json.load(f)
+            config.update(user_config)
+    except (json.JSONDecodeError, IOError):
+        pass
+        
+    return config
+
+def save_config(config: Dict[str, Any], file_path: str = "config.json") -> None:
+    """Persists current configuration state to disk."""
+    try:
+        with open(file_path, "w") as f:
+            json.dump(config, f, indent=4)
+    except IOError:
+        pass
