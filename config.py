@@ -1,43 +1,31 @@
-import json
 import os
-from typing import Any, Dict
+from typing import Dict, Any
 
-DEFAULT_CONFIG = {
-    "roblox_user_id": 0,
-    "automation_interval": 60,
-    "headless_mode": True,
-    "max_retries": 3
-}
+# Roblox automation environment configuration
 
-class ConfigLoader:
-    """Handles loading and merging of automation configurations."""
-    
-    def __init__(self, filepath: str = "config.json"):
-        self.filepath = filepath
+class Config:
+    DEFAULT_SETTINGS: Dict[str, Any] = {
+        "roblox_path": os.getenv("ROBLOX_PATH", "C:/Program Files (x86)/Roblox/Versions"),
+        "auth_token": os.getenv("ROBLOX_TOKEN", ""),
+        "retry_limit": 3,
+        "timeout": 30,
+        "headless": False
+    }
 
-    def load(self) -> Dict[str, Any]:
-        config = DEFAULT_CONFIG.copy()
-        
-        if os.path.exists(self.filepath):
-            try:
-                with open(self.filepath, "r") as f:
-                    user_data = json.load(f)
-                    config.update(user_data)
-            except (json.JSONDecodeError, IOError) as e:
-                print(f"Warning: Failed to load config, using defaults: {e}")
-        else:
-            self._save_defaults(config)
-            
-        return config
+    @classmethod
+    def get(cls, key: str) -> Any:
+        return cls.DEFAULT_SETTINGS.get(key)
 
-    def _save_defaults(self, config: Dict[str, Any]) -> None:
-        try:
-            with open(self.filepath, "w") as f:
-                json.dump(config, f, indent=4)
-        except IOError as e:
-            print(f"Warning: Could not create default config file: {e}")
+    @classmethod
+    def update(cls, key: str, value: Any) -> None:
+        cls.DEFAULT_SETTINGS[key] = value
+
+def load_environment() -> None:
+    """Initializes environment variables for automation tool"""
+    required_vars = ["ROBLOX_TOKEN"]
+    for var in required_vars:
+        if not os.getenv(var):
+            print(f"Warning: {var} is not set")
 
 if __name__ == "__main__":
-    loader = ConfigLoader()
-    current_config = loader.load()
-    print(f"Active config loaded: {current_config}")
+    load_environment()
