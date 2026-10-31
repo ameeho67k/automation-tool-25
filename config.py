@@ -1,31 +1,54 @@
+import json
 import os
-from typing import Dict, Any
+from pathlib import Path
+from typing import Any, Dict
 
-# Roblox automation environment configuration
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "cookie": "",
+    "place_id": 0,
+    "group_id": 0,
+    "max_threads": 4,
+    "request_timeout": 15,
+    "retry_attempts": 3,
+    "rate_limit_delay": 1.0,
+    "webhook_url": "",
+    "debug_mode": False
+}
 
-class Config:
-    DEFAULT_SETTINGS: Dict[str, Any] = {
-        "roblox_path": os.getenv("ROBLOX_PATH", "C:/Program Files (x86)/Roblox/Versions"),
-        "auth_token": os.getenv("ROBLOX_TOKEN", ""),
-        "retry_limit": 3,
-        "timeout": 30,
-        "headless": False
-    }
+class ConfigManager:
+    """Manages loading and merging configuration settings for Roblox automation."""
 
-    @classmethod
-    def get(cls, key: str) -> Any:
-        return cls.DEFAULT_SETTINGS.get(key)
+    def __init__(self, config_path: str = "config.json"):
+        self.config_path = Path(config_path)
+        self.config: Dict[str, Any] = DEFAULT_CONFIG.copy()
 
-    @classmethod
-    def update(cls, key: str, value: Any) -> None:
-        cls.DEFAULT_SETTINGS[key] = value
+    def load_config(self) -> Dict[str, Any]:
+        """Loads configuration from file if it exists and merges with defaults."""
+        if self.config_path.exists():
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    file_config = json.load(f)
+                    self.config.update(file_config)
+            except (json.JSONDecodeError, OSError) as err:
+                print(f"[Warning] Failed to read config file, using defaults: {err}")
+        else:
+            self.save_default_config()
 
-def load_environment() -> None:
-    """Initializes environment variables for automation tool"""
-    required_vars = ["ROBLOX_TOKEN"]
-    for var in required_vars:
-        if not os.getenv(var):
-            print(f"Warning: {var} is not set")
+        # Allow environment overrides for sensitive credentials
+        env_cookie = os.getenv("ROBLOSECURITY")
+        if env_cookie:
+            self.config["cookie"] = env_cookie
 
-if __name__ == "__main__":
-    load_environment()
+        return self.config
+
+    def save_default_config(self) -> None:
+        """Saves current configuration to disk as default configuration file."""
+        try:
+            with open(self.config_path, "w", encoding="utf-8") as f:
+                json.dump(self.config, f, indent=4)
+        except OSError as err:
+            print(f"[Warning] Could not write default config file: {err}")
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Retrieves a configuration value by key."""
+        return self.config.get(key, default)
