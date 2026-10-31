@@ -1,44 +1,32 @@
-import os
-import sys
 import logging
-from logging.handlers import RotatingFileHandler
+import sys
+import os
+from datetime import datetime
 
-def setup_logger(name: str = "roblox_automation", log_dir: str = "logs", level: int = logging.INFO) -> logging.Logger:
-    """Configures and returns a logger instance with rotating file handlers."""
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir, exist_ok=True)
-
+def setup_logger(name: str, log_dir: str = 'logs') -> logging.Logger:
+    """Configures a robust logger with file system edge case handling."""
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(logging.INFO)
 
-    # Prevent adding duplicate handlers if setup is called multiple times
-    if logger.handlers:
+    try:
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+    except (PermissionError, OSError) as e:
+        # Fallback to stderr if directory creation fails due to permissions
+        print(f"Critical: Could not create log directory {log_dir}: {e}", file=sys.stderr)
         return logger
 
-    # Format structure for output
-    log_formatter = logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
+    log_path = os.path.join(log_dir, f"automation_{datetime.now().strftime('%Y-%m-%d')}.log")
+    
+    try:
+        handler = logging.FileHandler(log_path)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    except (IOError, OSError) as e:
+        # Fallback if specific file is inaccessible or disk is full
+        stream_handler = logging.StreamHandler(sys.stderr)
+        logger.addHandler(stream_handler)
+        logger.error(f"Logging file failure: {e}. Falling back to console output.")
 
-    # Console output for terminal display
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(log_formatter)
-    logger.addHandler(console_handler)
-
-    # Rotating file handler (5 MB max size, keeps 3 backups)
-    log_file_path = os.path.join(log_dir, "bot_activity.log")
-    file_handler = RotatingFileHandler(
-        log_file_path,
-        maxBytes=5 * 1024 * 1024,
-        backupCount=3,
-        encoding="utf-8"
-    )
-    file_handler.setFormatter(log_formatter)
-    logger.addHandler(file_handler)
-
-    logger.info("Logger initialized for Roblox automation operations")
     return logger
-
-# Initialize default logger instance
-bot_logger = setup_logger()
