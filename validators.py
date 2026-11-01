@@ -1,32 +1,38 @@
-import re
+import logging
 
-class InputValidator:
-    """Utility class for validating Roblox-related automation inputs."""
+logger = logging.getLogger(__name__)
 
-    @staticmethod
-    def validate_user_id(user_id: str) -> bool:
-        """Checks if the user_id is a valid numeric string."""
-        return bool(re.fullmatch(r'\d{5,12}', str(user_id)))
+class RobloxAutomationError(Exception):
+    """Base exception for automation-tool-25"""
+    pass
 
-    @staticmethod
-    def validate_place_id(place_id: str) -> bool:
-        """Checks if the place_id is a valid numeric string."""
-        return bool(re.fullmatch(r'\d{7,15}', str(place_id)))
+def validate_game_id(game_id):
+    """Ensures game_id is a valid integer string or numeric type."""
+    try:
+        parsed_id = int(game_id)
+        if parsed_id <= 0:
+            raise ValueError("ID must be a positive integer")
+        return parsed_id
+    except (ValueError, TypeError) as e:
+        logger.error(f"Invalid Roblox Game ID: {game_id}. Error: {e}")
+        raise RobloxAutomationError(f"Invalid game format: {game_id}")
 
-    @staticmethod
-    def validate_configuration(config: dict) -> bool:
-        """Validates the core automation configuration dictionary."""
-        required_keys = ['user_id', 'place_id', 'delay']
-        if not all(key in config for key in required_keys):
-            return False
-        
-        if not InputValidator.validate_user_id(config['user_id']):
-            return False
-            
-        if not InputValidator.validate_place_id(config['place_id']):
-            return False
-            
-        if not isinstance(config['delay'], (int, float)) or config['delay'] < 0:
-            return False
-            
-        return True
+def validate_auth_cookie(cookie):
+    """Checks basic cookie structure to prevent malformed requests."""
+    if not cookie or not isinstance(cookie, str):
+        raise RobloxAutomationError("Authentication cookie is missing or invalid type")
+    
+    if not cookie.startswith('_|WARNING:-DO-NOT-SHARE-THIS'):
+        logger.warning("Cookie format suspicious; missing expected warning header.")
+    return cookie.strip()
+
+def safe_execute(func, *args, **kwargs):
+    """Wrapper to catch execution edge cases during automation tasks."""
+    try:
+        return func(*args, **kwargs)
+    except ConnectionError:
+        logger.critical("Network connection lost during operation")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in {func.__name__}: {str(e)}")
+        return None
