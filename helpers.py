@@ -1,51 +1,48 @@
 import re
-from typing import Optional, Union
-
-ROBLOX_TAX_RATE = 0.30
+from typing import Dict, Optional, Any
 
 
-def extract_asset_id(url_or_string: str) -> Optional[int]:
-    """Extracts a numeric Roblox asset or place ID from a string or URL."""
-    match = re.search(r'(?:catalog/|library/|games/|assets/)?(\d+)', str(url_or_string))
-    if match:
-        return int(match.group(1))
+def extract_csrf_token(response_headers: Dict[str, str]) -> Optional[str]:
+    """Extract X-CSRF-TOKEN from Roblox API response headers."""
+    for key, value in response_headers.items():
+        if key.lower() == "x-csrf-token":
+            return value
     return None
 
 
-def calculate_net_robux(gross_amount: int) -> int:
-    """Calculates net Robux after deducting Roblox\'s 30% marketplace fee."""
-    if gross_amount < 0:
-        raise ValueError("Gross amount must be non-negative")
-    return max(0, int(gross_amount * (1.0 - ROBLOX_TAX_RATE)))
+def sanitize_cookie(cookie: str) -> str:
+    """Clean and format standard Roblox security cookie string."""
+    cleaned = cookie.strip()
+    if cleaned.startswith(".ROBLOSECURITY="):
+        cleaned = cleaned[15:]
+    return cleaned.strip('"\'')
 
 
-def calculate_gross_price(target_net: int) -> int:
-    """Calculates required list price to receive a target net Robux amount."""
-    if target_net < 0:
-        raise ValueError("Target net must be non-negative")
-    if target_net == 0:
-        return 0
-    return max(1, int(target_net / (1.0 - ROBLOX_TAX_RATE)))
+def get_default_headers(cookie: str, csrf_token: Optional[str] = None) -> Dict[str, str]:
+    """Generate standard request headers required for Roblox endpoints."""
+    clean_cookie = sanitize_cookie(cookie)
+    headers = {
+        "User-Agent": "RobloxAutomationTool/1.0",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Cookie": f".ROBLOSECURITY={clean_cookie}",
+    }
+    if csrf_token:
+        headers["X-CSRF-TOKEN"] = csrf_token
+    return headers
 
 
-def format_robux(amount: Union[int, float]) -> str:
-    """Formats Robux numbers into compact readable strings (e.g., 10.5K, 2M)."""
-    value = float(amount)
-    if value >= 1_000_000_000:
-        formatted = f"{value / 1_000_000_000:.1f}B"
-    elif value >= 1_000_000:
-        formatted = f"{value / 1_000_000:.1f}M"
-    elif value >= 1_000:
-        formatted = f"{value / 1_000:.1f}K"
-    else:
-        return str(int(value))
-    return formatted.replace(".0", "")
-
-
-def is_valid_username(username: str) -> bool:
-    """Validates if a string adheres to standard Roblox username requirements."""
-    if not (3 <= len(username) <= 20):
-        return False
-    if username.startswith("_") or username.endswith("_"):
-        return False
-    return bool(re.match(r"^[a-zA-Z0-9_]+$", username))
+def parse_place_id(url_or_id: Any) -> Optional[int]:
+    """Extract a numeric Place ID from a Roblox game URL or raw ID input."""
+    if isinstance(url_or_id, int):
+        return url_or_id if url_or_id > 0 else None
+    
+    val_str = str(url_or_id).strip()
+    if val_str.isdigit():
+        return int(val_str)
+    
+    match = re.search(r"games/(\d+)", val_str)
+    if match:
+        return int(match.group(1))
+    
+    return None
