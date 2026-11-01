@@ -1,49 +1,46 @@
 # automation-tool-25
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+A high-performance Roblox automation framework built in Python for developers. This tool streamlines game testing and task execution by interfacing directly with the Roblox engine environment.
 
-automation-tool-25 is a lightweight Python-based utility designed to streamline repetitive tasks within the Roblox ecosystem. It leverages robust automation libraries to help developers and power users manage accounts and process game data efficiently.
+## Features
 
-### Features
-*   **Automated Account Management:** Simplifies the process of handling multi-account login sequences and session maintenance.
-*   **Data Scraper:** Extracts real-time game metadata and player statistics directly from the Roblox API.
-*   **Headless Execution:** Designed to run in resource-efficient headless modes, perfect for server-side deployments.
-*   **Custom Script Injection:** Supports modular plugin architecture to automate specific in-game interactions via WebSocket bridging.
+*   **Headless Execution:** Run automation scripts without rendering the full 3D viewport, significantly reducing CPU and memory overhead.
+*   **API-First Design:** Full support for custom scripting plugins, allowing for modular control over game objects and services.
+*   **Reliability Engine:** Built-in automatic reconnection logic and error recovery for long-running automation tasks.
+*   **Low-Level Interaction:** Efficiently read and write game state data using optimized memory-mapping techniques.
 
-### Installation
+## Installation
 
-Ensure you have [Python 3.9+](https://www.python.org/) installed, then follow these steps:
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Developer/automation-tool-25.git
-   cd automation-tool-25
-   ```
-
-2. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Configure your environment variables by creating a `.env` file based on the `example.env` provided.
-
-### Usage
-
-To start the automation suite with default parameters, run the following command in your terminal:
+Ensure you have Python 3.10+ installed. Clone the repository and install the required dependencies:
 
 ```bash
-python main.py --config config.yaml --mode full
+git clone https://github.com/Developer/automation-tool-25.git
+cd automation-tool-25
+pip install -r requirements.txt
 ```
 
-For advanced users looking to integrate the tool into existing workflows, you can import the core module:
+## Usage
+
+Configure your target settings in `config.yaml`, then execute the tool using the following command:
 
 ```python
-from automation import Engine
+from automation import BotClient
 
-bot = Engine(api_key="YOUR_KEY")
-bot.initialize_session()
-bot.execute_task("data_fetcher")
+# Initialize the client
+client = BotClient(config_path="config.yaml")
+
+# Run the task
+client.start(target_game_id="123456789")
 ```
 
-### Disclaimer
-This tool is intended for educational and internal testing purposes only. Users are responsible for ensuring compliance with the [Roblox Terms of Use](https://en.help.roblox.com/hc/en-us/articles/115004647846-Roblox-Terms-of-Use). The author assumes no liability for account suspensions or restricted access resulting from misuse of this software.
+For advanced users, you can pass custom behavioral flags via the command line:
+
+```bash
+python main.py --headless --loop --retry-limit 5
+```
+
+## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Distributed under the MIT License. See `LICENSE` for more information.
