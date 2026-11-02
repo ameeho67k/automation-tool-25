@@ -1,30 +1,62 @@
-import time
-import functools
-import logging
-from typing import Callable, Any
+import re
+from typing import Dict, Any, Optional
 
-logger = logging.getLogger(__name__)
 
-def retry_operation(max_retries: int = 3, delay: float = 1.5):
-    """Decorator to retry network operations on failure."""
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            last_exception = None
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    last_exception = e
-                    wait_time = delay * (2 ** attempt)
-                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {wait_time}s...")
-                    time.sleep(wait_time)
-            logger.error(f"Operation failed after {max_retries} attempts.")
-            raise last_exception
-        return wrapper
-    return decorator
+def extract_asset_id(url_or_string: str) -> Optional[int]:
+    """
+    Extracts a Roblox asset or place ID from a given URL or raw string.
 
-@retry_operation(max_retries=3)
-def execute_roblox_api_call(request_func: Callable, *args, **kwargs):
-    """Wrapper for external API requests with retries."""
-    return request_func(*args, **kwargs)
+    Args:
+        url_or_string: The string containing the Roblox asset reference.
+
+    Returns:
+        The extracted integer ID if found, otherwise None.
+    """
+    match = re.search(r'(?:catalog|library|games)/(\d+)', url_or_string)
+    if match:
+        return int(match.group(1))
+    
+    digits_match = re.search(r'^\d+$', url_or_string.strip())
+    if digits_match:
+        return int(digits_match.group(0))
+        
+    return None
+
+
+def format_cookie(raw_cookie: str) -> str:
+    """
+    Ensures a Roblox security cookie is properly formatted.
+
+    Args:
+        raw_cookie: The raw .ROBLOSECURITY string or value.
+
+    Returns:
+        A clean, formatted cookie string with the warning prefix.
+    """
+    cleaned = raw_cookie.strip()
+    prefix = "_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-to-your-account-and-steal-your-ROBUX-and-items.|_"
+    if not cleaned.startswith("_|WARNING"):
+        return f"{prefix}{cleaned}"
+    return cleaned
+
+
+def parse_place_launch_args(place_id: int, job_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Generates standard protocol parameters for launching a Roblox place.
+
+    Args:
+        place_id: The ID of the Roblox place to join.
+        job_id: Optional server instance job ID.
+
+    Returns:
+        Dictionary containing formatted protocol parameters.
+    """
+    params: Dict[str, Any] = {
+        "place_id": place_id,
+        "launch_time": 0,
+        "protocol": "roblox-player"
+    }
+    if job_id:
+        params["game_instance_id"] = job_id
+        
+    return params
