@@ -1,32 +1,33 @@
 import json
 import os
-from typing import Any, Dict
+from typing import Dict, Any
 
 DEFAULT_CONFIG = {
-    "roblox_studio_path": "C:\\Program Files (x86)\\Roblox\\Versions",
-    "auto_save_interval": 300,
-    "debug_mode": False,
-    "api_key": None
+    "roblox_cookie": "",
+    "max_retries": 3,
+    "proxy_url": None,
+    "log_level": "INFO",
+    "auto_reconnect": True
 }
 
 def load_config(config_path: str = "config.json") -> Dict[str, Any]:
-    """Loads configuration from disk with fallback to defaults."""
+    """Loads configuration from disk with fallback defaults."""
     config = DEFAULT_CONFIG.copy()
 
-    if os.path.exists(config_path):
-        try:
-            with open(config_path, 'r') as f:
-                user_config = json.load(f)
-                config.update(user_config)
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"Warning: Failed to load config file: {e}. Using defaults.")
-    
+    if not os.path.exists(config_path):
+        save_config(config_path, config)
+        return config
+
+    try:
+        with open(config_path, "r") as f:
+            user_config = json.load(f)
+            config.update(user_config)
+    except (json.JSONDecodeError, IOError):
+        pass
+
     return config
 
-def save_config(config: Dict[str, Any], config_path: str = "config.json") -> None:
+def save_config(config_path: str, config: Dict[str, Any]) -> None:
     """Persists current configuration state to disk."""
-    try:
-        with open(config_path, 'w') as f:
-            json.dump(config, f, indent=4)
-    except IOError as e:
-        print(f"Error: Could not save configuration: {e}")
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=4)
