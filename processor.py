@@ -1,40 +1,44 @@
 import logging
-from typing import List, Dict, Any
 
-# Configure module logging
-logger = logging.getLogger('automation-tool-25')
+logger = logging.getLogger(__name__)
 
-class RobloxTaskProcessor:
-    """Handles execution of automated Roblox game tasks."""
+def validate_input(data: dict) -> bool:
+    """Validates roblox automation payload structure."""
+    required_keys = ['script_id', 'execution_delay', 'server_id']
+    if not all(key in data for key in required_keys):
+        return False
+    if not isinstance(data.get('execution_delay'), (int, float)):
+        return False
+    return True
 
-    def __init__(self, settings: Dict[str, Any]):
-        self.settings = settings
-        self.is_active = False
-
-    def validate_session(self) -> bool:
-        """Ensures session integrity before starting tasks."""
-        return self.settings.get("auth_token") is not None
-
-    def execute_task(self, task_name: str, payload: Dict[str, Any]) -> bool:
-        """Executes a specific automation task logic."""
-        if not self.validate_session():
-            logger.error(f"Task {task_name} failed: Invalid session")
-            return False
-        
+def run_processing_loop(task_queue):
+    """Main loop for processing automation tasks."""
+    logger.info("Starting roblox automation processor")
+    
+    while True:
+        task = task_queue.get()
+        if task is None:
+            break
+            
+        if not validate_input(task):
+            logger.warning(f"Invalid task payload skipped: {task}")
+            continue
+            
         try:
-            logger.info(f"Processing: {task_name}")
-            # Simulated core execution logic
-            return True
+            execute_task(task)
         except Exception as e:
-            logger.exception(f"Critical failure during {task_name}: {e}")
-            return False
+            logger.error(f"Task execution failed: {e}")
+        
+        task_queue.task_done()
 
-    def batch_process(self, tasks: List[Dict[str, Any]]) -> None:
-        """Iterates through a list of tasks for sequential execution."""
-        for task in tasks:
-            self.execute_task(task.get("name", "unknown"), task.get("data", {}))
+def execute_task(task):
+    """Handles actual roblox injection logic."""
+    logger.info(f"Executing task: {task['script_id']}")
 
-    def shutdown(self) -> None:
-        """Graceful cleanup of active task processing."""
-        self.is_active = False
-        logger.info("Processor shutdown complete")
+if __name__ == "__main__":
+    # Example usage
+    from queue import Queue
+    q = Queue()
+    q.put({'script_id': 'rbx_script_01', 'execution_delay': 0.5, 'server_id': 12345})
+    q.put(None)
+    run_processing_loop(q)
