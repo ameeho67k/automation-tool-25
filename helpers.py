@@ -1,47 +1,27 @@
-import re
+import time
 import random
-from typing import List, Generator, Any, Optional
+from typing import Any, Callable
 
-
-def extract_asset_id(input_str: str) -> Optional[int]:
-    """
-    Extracts a numeric Roblox ID from a raw string, URL, or integer.
-    Returns None if no valid ID is found.
-    """
-    if isinstance(input_str, int):
-        return input_str
-    
-    # Match standard Roblox URL patterns
-    match = re.search(r'(?:games|catalog|library|users|badges|game-passes)/(\d+)', str(input_str))
-    if match:
-        return int(match.group(1))
-    
-    # Fallback to direct digits check
-    cleaned = str(input_str).strip()
-    if cleaned.isdigit():
-        return int(cleaned)
-    
+def retry_operation(func: Callable, retries: int = 3, delay: float = 1.0) -> Any:
+    """Execute function with simple linear retry logic."""
+    for i in range(retries):
+        try:
+            return func()
+        except Exception as e:
+            if i == retries - 1:
+                raise e
+            time.sleep(delay * (2 ** i))
     return None
 
+def get_random_user_agent() -> str:
+    """Generate randomized browser identifiers for requests."""
+    versions = ["115.0.0.0", "116.0.0.0", "117.0.0.0"]
+    return f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{random.choice(versions)} Safari/537.36"
 
-def format_robux(amount: int) -> str:
-    """Formats an integer amount into a readable Robux string (e.g., R$1,234,567)."""
-    if not isinstance(amount, (int, float)):
-        return "R$0"
-    return f"R${int(amount):,}"
+def sanitize_input(text: str) -> str:
+    """Remove non-ascii characters from string input."""
+    return text.encode('ascii', 'ignore').decode('ascii').strip()
 
-
-def calculate_backoff_delay(attempt: int, base_delay: float = 1.0, max_delay: float = 30.0) -> float:
-    """
-    Calculates exponential backoff delay with full jitter for rate-limited Roblox endpoints.
-    """
-    temp = min(max_delay, base_delay * (2 ** attempt))
-    return random.uniform(0, temp)
-
-
-def batch_items(items: List[Any], batch_size: int) -> Generator[List[Any], None, None]:
-    """Yield successive batch_size chunks from items list for batch API calls."""
-    if batch_size <= 0:
-        raise ValueError("batch_size must be greater than 0")
-    for i in range(0, len(items), batch_size):
-        yield items[i:i + batch_size]
+def format_timestamp() -> str:
+    """Human readable string for log entries."""
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
