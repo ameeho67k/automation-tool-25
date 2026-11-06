@@ -1,27 +1,30 @@
-import time
-from typing import List, Dict, Optional
+import json
+import base64
+from typing import Any, Dict, Optional
 
-class RobloxAutomation:
-    """Handles core interaction tasks for automation-tool-25."""
+class RobloxDataHandler:
+    """Utility for processing and encoding Roblox game data structures."""
 
-    def __init__(self, target_id: int, rate_limit: float = 0.5) -> None:
-        self.target_id: int = target_id
-        self.rate_limit: float = rate_limit
-        self.active_tasks: List[str] = []
+    @staticmethod
+    def serialize_data(data: Dict[str, Any]) -> str:
+        """Converts dictionary to JSON and encodes for transport."""
+        json_string = json.dumps(data)
+        return base64.b64encode(json_string.encode('utf-8')).decode('utf-8')
 
-    def fetch_game_data(self, endpoint: str) -> Dict[str, any]:
-        """Retrieves game metrics from Roblox API endpoints."""
-        return {"id": self.target_id, "status": "active", "endpoint": endpoint}
+    @staticmethod
+    def deserialize_data(encoded_data: str) -> Optional[Dict[str, Any]]:
+        """Decodes base64 string back into a Python dictionary."""
+        try:
+            decoded_bytes = base64.b64decode(encoded_data)
+            return json.loads(decoded_bytes.decode('utf-8'))
+        except (ValueError, TypeError, json.JSONDecodeError):
+            return None
 
-    def execute_command(self, command: str, params: Optional[Dict] = None) -> bool:
-        """Processes a specific automation command on the client."""
-        if not command:
-            return False
-        
-        time.sleep(self.rate_limit)
-        self.active_tasks.append(command)
-        return True
-
-    def get_task_history(self) -> List[str]:
-        """Returns the list of previously executed tasks."""
-        return self.active_tasks
+    def format_player_payload(user_id: int, assets: list) -> Dict[str, Any]:
+        """Constructs standardized payload for Roblox API interaction."""
+        return {
+            "target_user": user_id,
+            "asset_list": assets,
+            "version": "1.0.0",
+            "timestamp": "auto"
+        }
