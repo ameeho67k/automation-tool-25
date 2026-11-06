@@ -1,48 +1,50 @@
-import os
 import logging
+import os
 from logging.handlers import RotatingFileHandler
 
-LOG_DIR = "logs"
-LOG_FILE = "roblox_automation.log"
-
-def setup_logger(name="roblox_bot", log_level=logging.INFO, max_bytes=5_000_000, backup_count=5):
-    """Configure and return a logger instance with rotating file and console output."""
-    if not os.path.exists(LOG_DIR):
-        os.makedirs(LOG_DIR, exist_ok=True)
-
-    log_path = os.path.join(LOG_DIR, LOG_FILE)
+def setup_logger(
+    name: str = "roblox_automation",
+    log_file: str = "logs/automation.log",
+    max_bytes: int = 5 * 1024 * 1024,
+    backup_count: int = 5,
+    level: int = logging.INFO
+) -> logging.Logger:
+    """
+    Configures and returns a logger with rotating file and console handlers
+    tailored for roblox automation tasks.
+    """
     logger = logging.getLogger(name)
-    logger.setLevel(log_level)
+    logger.setLevel(level)
 
-    # Prevent duplicate handlers if function is called multiple times
     if logger.hasHandlers():
-        return logger
+        logger.handlers.clear()
 
-    # Output format tailored for automation debugging
+    log_dir = os.path.dirname(log_file)
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+
     formatter = logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s",
+        fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
 
-    # Rotating file handler to prevent giant log files during extended bot runs
     file_handler = RotatingFileHandler(
-        log_path,
+        filename=log_file,
         maxBytes=max_bytes,
         backupCount=backup_count,
         encoding="utf-8"
     )
     file_handler.setFormatter(formatter)
-    file_handler.setLevel(log_level)
+    file_handler.setLevel(level)
 
-    # Console handler for real-time output monitoring
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-    console_handler.setLevel(log_level)
+    console_handler.setLevel(level)
 
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
     return logger
 
-# Main logger instance for global import
-bot_logger = setup_logger()
+# Default logger instance for quick import
+logger = setup_logger()
