@@ -2,49 +2,38 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-def setup_logger(
-    name: str = "roblox_automation",
-    log_file: str = "logs/automation.log",
-    max_bytes: int = 5 * 1024 * 1024,
-    backup_count: int = 5,
-    level: int = logging.INFO
-) -> logging.Logger:
+def setup_logger(name: str, log_file: str = 'automation.log', level: int = logging.INFO):
     """
-    Configures and returns a logger with rotating file and console handlers
-    tailored for roblox automation tasks.
+    configures a rotating file logger for automation tasks
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
+    # ensure log directory exists
     log_dir = os.path.dirname(log_file)
     if log_dir and not os.path.exists(log_dir):
-        os.makedirs(log_dir, exist_ok=True)
+        os.makedirs(log_dir)
+
+    # rotation setup: 5MB per file, keep 3 backups
+    handler = RotatingFileHandler(
+        log_file, 
+        maxBytes=5*1024*1024, 
+        backupCount=3
+    )
 
     formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
+    handler.setFormatter(formatter)
 
-    file_handler = RotatingFileHandler(
-        filename=log_file,
-        maxBytes=max_bytes,
-        backupCount=backup_count,
-        encoding="utf-8"
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(level)
-
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    if not logger.handlers:
+        logger.addHandler(handler)
+        # add console output as well
+        console = logging.StreamHandler()
+        console.setFormatter(formatter)
+        logger.addHandler(console)
 
     return logger
 
-# Default logger instance for quick import
-logger = setup_logger()
+# global logger instance for the project
+app_logger = setup_logger('automation-tool-25')
