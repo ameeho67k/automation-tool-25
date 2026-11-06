@@ -1,32 +1,30 @@
 import os
 
-# Roblox API configuration
-BASE_URL = "https://apis.roblox.com"
-API_KEY_HEADER = "X-API-KEY"
+# Configuration paths and default values
+BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+LOG_DIRECTORY = os.path.join(BASE_PATH, 'logs')
 
-# Retry configuration for stability
-MAX_RETRIES = 3
-RETRY_DELAY = 2.0
+# Roblox process identification constants
+ROBLOX_PROCESS_NAMES = ('RobloxPlayerBeta.exe', 'RobloxPlayerLauncher.exe')
 
-# Directory and file paths for automation
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_DIR = os.path.join(BASE_DIR, "logs")
-DATA_DIR = os.path.join(BASE_DIR, "data")
+# Network and timeout settings
+DEFAULT_TIMEOUT = 30
+RETRY_ATTEMPTS = 3
+REQUEST_DELAY = 1.5
 
-# Default request timeout in seconds
-REQUEST_TIMEOUT = 30
+# Automation state constants
+STATUS_IDLE = 'IDLE'
+STATUS_RUNNING = 'RUNNING'
+STATUS_ERROR = 'ERROR'
 
-# User agent for identification
-USER_AGENT = "RobloxAutomationTool/2.5.0"
+# Keybindings and interaction defaults
+INTERACTION_KEY = 'e'
+SCAN_INTERVAL = 0.5
 
-# Supported job categories
-JOB_TYPES = {
-    "ASSET_UPLOAD": "asset_upload",
-    "GROUP_MANAGER": "group_manager",
-    "PLAYER_ANALYTICS": "player_analytics"
-}
+# API endpoints
+AUTH_ENDPOINT = 'https://auth.roblox.com/v1'
+USER_ENDPOINT = 'https://users.roblox.com/v1'
 
-# Status codes for internal processes
-STATUS_SUCCESS = 0
-STATUS_RETRY = 1
-STATUS_FATAL = 2
+# Supported environment flags
+DEBUG_MODE = os.getenv('ROBLOX_DEBUG', 'False') == 'True'
+HEADLESS_MODE = os.getenv('ROBLOX_HEADLESS', 'False') == 'True'
