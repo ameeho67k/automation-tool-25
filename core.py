@@ -1,65 +1,65 @@
-import time
-import requests
+import logging
+from typing import Dict, List, Any, Tuple
 
-class RobloxSessionError(Exception):
-    """Base exception for Roblox session errors."""
-    pass
+logger = logging.getLogger("roblox_automation")
 
-class InvalidCookieError(RobloxSessionError):
-    """Raised when the provided ROBLOSECURITY cookie is invalid or expired."""
-    pass
+ALLOWED_ACTIONS = {"purchase_asset", "send_trade", "update_place", "verify_ownership"}
 
-class RateLimitError(RobloxSessionError):
-    """Raised when hitting Roblox API rate limits."""
-    pass
+class ProcessingEngine:
+    """Handles execution and validation of incoming Roblox automation payloads."""
 
-class RobloxClient:
-    """Core client for interacting with Roblox APIs with edge-case handling."""
+    def __init__(self, max_batch_size: int = 50):
+        self.max_batch_size = max_batch_size
+        self.processed_count = 0
 
-    def __init__(self, roblosecurity_token: str):
-        if not roblosecurity_token or not roblosecurity_token.startswith("_|WARNING:-DO-NOT-SHARE-THIS"):
-            raise InvalidCookieError("Cookie format appears invalid or unformatted.")
-        
-        self.session = requests.Session()
-        self.session.cookies[".ROBLOSECURITY"] = roblosecurity_token
-        self.csrf_token = None
+    def validate_payload(self, payload: Dict[str, Any]) -> Tuple[bool, str]:
+        """Validate structure and required fields of an individual task payload."""
+        if not isinstance(payload, dict):
+            return False, "Payload must be a valid dictionary"
 
-    def fetch_csrf_token(self) -> str:
-        """Fetches or refreshes the X-CSRF-TOKEN required for write operations."""
-        response = self.session.post("https://auth.roblox.com/v2/logout")
-        if response.status_code == 403 and "x-csrf-token" in response.headers:
-            self.csrf_token = response.headers["x-csrf-token"]
-            return self.csrf_token
-        elif response.status_code == 401:
-            raise InvalidCookieError("Session cookie is unauthorized or expired.")
-        raise RobloxSessionError(f"Failed to fetch CSRF token. Status: {response.status_code}")
+        task_id = payload.get("task_id")
+        if not isinstance(task_id, str) or not task_id.strip():
+            return False, "Invalid or missing 'task_id'"
 
-    def request(self, method: str, url: str, **kwargs) -> dict:
-        """Executes API requests with automated CSRF retry and rate-limit handling."""
-        headers = kwargs.pop("headers", {})
-        if self.csrf_token:
-            headers["X-CSRF-TOKEN"] = self.csrf_token
+        asset_id = payload.get("asset_id")
+        if not isinstance(asset_id, int) or asset_id <= 0:
+            return False, "Field 'asset_id' must be a positive integer"
 
-        try:
-            response = self.session.request(method, url, headers=headers, timeout=15, **kwargs)
+        action = payload.get("action")
+        if action not in ALLOWED_ACTIONS:
+            return False, f"Action '{action}' is not supported"
 
-            # Handle expired CSRF token edge case
-            if response.status_code == 403 and response.headers.get("x-csrf-token"):
-                self.csrf_token = response.headers["x-csrf-token"]
-                headers["X-CSRF-TOKEN"] = self.csrf_token
-                response = self.session.request(method, url, headers=headers, timeout=15, **kwargs)
+        user_id = payload.get("target_user_id")
+        if user_id is not None and (not isinstance(user_id, int) or user_id <= 0):
+            return False, "Field 'target_user_id' must be a positive integer"
 
-            # Handle rate limiting edge case
-            if response.status_code == 429:
-                retry_after = int(response.headers.get("Retry-After", 5))
-                raise RateLimitError(f"Rate limited by Roblox API. Retry after {retry_after}s.")
+        return True, "Valid"
 
-            # Handle revoked session edge case
-            if response.status_code == 401:
-                raise InvalidCookieError("Roblox session expired during request execution.")
+    def run_processing_loop(self, raw_tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Process a batch of Roblox automation tasks with input validation."""
+        results = []
+        if len(raw_tasks) > self.max_batch_size:
+            logger.warning("Batch size exceeds limit of %d items", self.max_batch_size)
+            raw_tasks = raw_tasks[:self.max_batch_size]
 
-            response.raise_for_status()
-            return response.json()
+        for index, task in enumerate(raw_tasks):
+            is_valid, reason = self.validate_payload(task)
+            if not is_valid:
+                logger.error("Skipping task at index %d: %s", index, reason)
+                continue
 
-        except requests.RequestException as exc:
-            raise RobloxSessionError(f"Network error during request: {exc}") from exc
+            task_id = task["task_id"]
+            action = task["action"]
+            asset_id = task["asset_id"]
+
+            logger.info("Executing '%s' for asset %d (Task: %s)", action, asset_id, task_id)
+
+            results.append({
+                "task_id": task_id,
+                "status": "completed",
+                "action": action,
+                "asset_id": asset_id
+            })
+            self.processed_count += 1
+
+        return results
