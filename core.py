@@ -1,65 +1,53 @@
-import logging
-from typing import Dict, List, Any, Tuple
+import time
+from functools import lru_cache
+from typing import Dict, Any, List, Optional
+import requests
 
-logger = logging.getLogger("roblox_automation")
 
-ALLOWED_ACTIONS = {"purchase_asset", "send_trade", "update_place", "verify_ownership"}
+class RobloxSessionManager:
+    """Manages optimized HTTP requests and cached data for Roblox APIs."""
 
-class ProcessingEngine:
-    """Handles execution and validation of incoming Roblox automation payloads."""
+    def __init__(self, cookie: Optional[str] = None, timeout: float = 5.0):
+        self.session = requests.Session()
+        self.timeout = timeout
+        if cookie:
+            self.session.cookies[".ROBLOSECURITY"] = cookie
+            self.session.headers.update({"User-Agent": "AutomationTool25/1.0"})
 
-    def __init__(self, max_batch_size: int = 50):
-        self.max_batch_size = max_batch_size
-        self.processed_count = 0
+    @lru_cache(maxsize=512)
+    def get_asset_info(self, asset_id: int) -> Optional[Dict[str, Any]]:
+        """Fetch asset details with memory caching to reduce redundant network calls."""
+        url = f"https://economy.roblox.com/v2/assets/{asset_id}/details"
+        try:
+            response = self.session.get(url, timeout=self.timeout)
+            if response.status_code == 200:
+                return response.json()
+        except requests.RequestException:
+            pass
+        return None
 
-    def validate_payload(self, payload: Dict[str, Any]) -> Tuple[bool, str]:
-        """Validate structure and required fields of an individual task payload."""
-        if not isinstance(payload, dict):
-            return False, "Payload must be a valid dictionary"
+    def batch_fetch_user_presences(self, user_ids: List[int]) -> Dict[int, Dict[str, Any]]:
+        """Efficiently fetch multiple user presences in batched chunk requests."""
+        if not user_ids:
+            return {}
 
-        task_id = payload.get("task_id")
-        if not isinstance(task_id, str) or not task_id.strip():
-            return False, "Invalid or missing 'task_id'"
+        chunk_size = 100
+        results = {}
+        url = "https://presence.roblox.com/v1/presence/users"
 
-        asset_id = payload.get("asset_id")
-        if not isinstance(asset_id, int) or asset_id <= 0:
-            return False, "Field 'asset_id' must be a positive integer"
-
-        action = payload.get("action")
-        if action not in ALLOWED_ACTIONS:
-            return False, f"Action '{action}' is not supported"
-
-        user_id = payload.get("target_user_id")
-        if user_id is not None and (not isinstance(user_id, int) or user_id <= 0):
-            return False, "Field 'target_user_id' must be a positive integer"
-
-        return True, "Valid"
-
-    def run_processing_loop(self, raw_tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Process a batch of Roblox automation tasks with input validation."""
-        results = []
-        if len(raw_tasks) > self.max_batch_size:
-            logger.warning("Batch size exceeds limit of %d items", self.max_batch_size)
-            raw_tasks = raw_tasks[:self.max_batch_size]
-
-        for index, task in enumerate(raw_tasks):
-            is_valid, reason = self.validate_payload(task)
-            if not is_valid:
-                logger.error("Skipping task at index %d: %s", index, reason)
+        for i in range(0, len(user_ids), chunk_size):
+            chunk = user_ids[i:i + chunk_size]
+            try:
+                res = self.session.post(url, json={"userIds": chunk}, timeout=self.timeout)
+                if res.status_code == 200:
+                    data = res.json().get("userPresences", [])
+                    for item in data:
+                        results[item["userId"]] = item
+            except requests.RequestException:
                 continue
 
-            task_id = task["task_id"]
-            action = task["action"]
-            asset_id = task["asset_id"]
-
-            logger.info("Executing '%s' for asset %d (Task: %s)", action, asset_id, task_id)
-
-            results.append({
-                "task_id": task_id,
-                "status": "completed",
-                "action": action,
-                "asset_id": asset_id
-            })
-            self.processed_count += 1
-
         return results
+
+    def clear_cache(self) -> None:
+        """Clear memory cache for asset responses."""
+        self.get_asset_info.cache_clear()
