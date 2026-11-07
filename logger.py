@@ -1,39 +1,55 @@
-import logging
 import os
+import sys
+import logging
 from logging.handlers import RotatingFileHandler
+from typing import Optional
 
-def setup_logger(name: str, log_file: str = 'automation.log', level: int = logging.INFO):
+
+def setup_logger(
+    name: str = "roblox_automation",
+    log_dir: str = "logs",
+    log_file: str = "bot.log",
+    level: int = logging.INFO,
+    max_bytes: int = 5 * 1024 * 1024,
+    backup_count: int = 5
+) -> logging.Logger:
     """
-    configures a rotating file logger for automation tasks
+    Configures and returns a logger instance with console and rotating file handlers.
+    Designed for multi-threaded Roblox automation scripts.
     """
+    os.makedirs(log_dir, exist_ok=True)
+    file_path = os.path.join(log_dir, log_file)
+
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    # ensure log directory exists
-    log_dir = os.path.dirname(log_file)
-    if log_dir and not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    # rotation setup: 5MB per file, keep 3 backups
-    handler = RotatingFileHandler(
-        log_file, 
-        maxBytes=5*1024*1024, 
-        backupCount=3
-    )
+    if logger.handlers:
+        return logger
 
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        fmt="[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
     )
-    handler.setFormatter(formatter)
 
-    if not logger.handlers:
-        logger.addHandler(handler)
-        # add console output as well
-        console = logging.StreamHandler()
-        console.setFormatter(formatter)
-        logger.addHandler(console)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(level)
+    logger.addHandler(console_handler)
+
+    file_handler = RotatingFileHandler(
+        filename=file_path,
+        maxBytes=max_bytes,
+        backupCount=backup_count,
+        encoding="utf-8"
+    )
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(level)
+    logger.addHandler(file_handler)
 
     return logger
 
-# global logger instance for the project
-app_logger = setup_logger('automation-tool-25')
+
+def get_session_logger(account_id: Optional[str] = None) -> logging.Logger:
+    """Helper to retrieve logger scoped for specific Roblox account sessions."""
+    logger_name = f"roblox_session.{account_id}" if account_id else "roblox_session"
+    return setup_logger(name=logger_name, log_file="session_activity.log")
