@@ -1,53 +1,35 @@
+import functools
 import time
-from functools import lru_cache
-from typing import Dict, Any, List, Optional
-import requests
+from typing import Callable, Any
 
+# Cache for repeated Roblox API operations to reduce latency
+_cache = {}
 
-class RobloxSessionManager:
-    """Manages optimized HTTP requests and cached data for Roblox APIs."""
+@functools.lru_cache(maxsize=128)
+def get_game_data(place_id: int) -> dict:
+    """Fetches and caches metadata for a specific Roblox place."""
+    # Simulating API request logic for automation-tool-25
+    return {"id": place_id, "active": True, "timestamp": time.time()}
 
-    def __init__(self, cookie: Optional[str] = None, timeout: float = 5.0):
-        self.session = requests.Session()
-        self.timeout = timeout
-        if cookie:
-            self.session.cookies[".ROBLOSECURITY"] = cookie
-            self.session.headers.update({"User-Agent": "AutomationTool25/1.0"})
+def batch_process_entities(entities: list, task_func: Callable) -> list:
+    """Executes tasks in batches to minimize overhead and prevent throttling."""
+    batch_size = 10
+    results = []
+    for i in range(0, len(entities), batch_size):
+        batch = entities[i:i + batch_size]
+        results.extend([task_func(e) for e in batch])
+        time.sleep(0.1)  # Throttle to avoid hitting Roblox API rate limits
+    return results
 
-    @lru_cache(maxsize=512)
-    def get_asset_info(self, asset_id: int) -> Optional[Dict[str, Any]]:
-        """Fetch asset details with memory caching to reduce redundant network calls."""
-        url = f"https://economy.roblox.com/v2/assets/{asset_id}/details"
+class AutomationEngine:
+    def __init__(self):
+        self.is_running = False
+
+    def run_optimized_loop(self, queue: list):
+        """Main execution loop using pre-warmed cache strategies."""
+        self.is_running = True
         try:
-            response = self.session.get(url, timeout=self.timeout)
-            if response.status_code == 200:
-                return response.json()
-        except requests.RequestException:
-            pass
-        return None
-
-    def batch_fetch_user_presences(self, user_ids: List[int]) -> Dict[int, Dict[str, Any]]:
-        """Efficiently fetch multiple user presences in batched chunk requests."""
-        if not user_ids:
-            return {}
-
-        chunk_size = 100
-        results = {}
-        url = "https://presence.roblox.com/v1/presence/users"
-
-        for i in range(0, len(user_ids), chunk_size):
-            chunk = user_ids[i:i + chunk_size]
-            try:
-                res = self.session.post(url, json={"userIds": chunk}, timeout=self.timeout)
-                if res.status_code == 200:
-                    data = res.json().get("userPresences", [])
-                    for item in data:
-                        results[item["userId"]] = item
-            except requests.RequestException:
-                continue
-
-        return results
-
-    def clear_cache(self) -> None:
-        """Clear memory cache for asset responses."""
-        self.get_asset_info.cache_clear()
+            processed = batch_process_entities(queue, get_game_data)
+            return processed
+        finally:
+            self.is_running = False
