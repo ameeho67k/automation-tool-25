@@ -1,33 +1,43 @@
-import logging
-import time
-from typing import Any, Callable, Optional
+import re
+import random
+from typing import Dict, Optional
 
-logger = logging.getLogger('automation-tool-25')
 
-class RobloxAutomationError(Exception):
-    """Base exception for automation operations."""
-    pass
+def extract_csrf_token(headers: Dict[str, str]) -> Optional[str]:
+    """Extract x-csrf-token from response headers (case-insensitive)."""
+    for key, value in headers.items():
+        if key.lower() == "x-csrf-token":
+            return value
+    return None
 
-def execute_with_retry(func: Callable, retries: int = 3, delay: float = 1.0) -> Any:
-    """Executes a roblox interaction with backoff logic."""
-    last_exception = None
-    
-    for attempt in range(retries):
-        try:
-            return func()
-        except (ConnectionError, TimeoutError) as e:
-            last_exception = e
-            logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying...")
-            time.sleep(delay * (2 ** attempt))
-        except Exception as e:
-            logger.error(f"Unrecoverable error in {func.__name__}: {e}")
-            raise RobloxAutomationError(f"Failed to execute {func.__name__}") from e
-            
-    raise RobloxAutomationError(f"Max retries reached for {func.__name__}") from last_exception
 
-def validate_roblox_session(session_data: Optional[dict]) -> bool:
-    """Checks validity of session configuration."""
-    if not session_data or 'cookie' not in session_data:
-        logger.error("Invalid session structure detected")
-        return False
-    return True
+def format_asset_url(asset_id: int) -> str:
+    """Construct standard Roblox asset delivery URL."""
+    if not isinstance(asset_id, int) or asset_id <= 0:
+        raise ValueError("Asset ID must be a positive integer.")
+    return f"https://assetdelivery.roblox.com/v1/asset/?id={asset_id}"
+
+
+def calculate_backoff(attempt: int, base_delay: float = 1.0, max_delay: float = 60.0) -> float:
+    """Calculate exponential backoff delay with full jitter for rate limits."""
+    temp = min(max_delay, base_delay * (2 ** attempt))
+    return random.uniform(0, temp)
+
+
+def sanitize_cookie(raw_cookie: str) -> str:
+    """Clean and validate Roblox security cookie string."""
+    cleaned = raw_cookie.strip()
+    prefix = "_|WARNING:-DO-NOT-SHARE-THIS."
+    if not cleaned.startswith(prefix):
+        if len(cleaned) > 100:
+            return f"{prefix}--Sharing-this-will-allow-someone-to-log-into-your-account-with-all-your-ROBUX-and-items.|_{cleaned}"
+        raise ValueError("Invalid Roblox security cookie format.")
+    return cleaned
+
+
+def parse_place_id(url: str) -> Optional[int]:
+    """Extract place ID from standard Roblox game URLs."""
+    match = re.search(r"roblox\.com/games/(\d+)", url)
+    if match:
+        return int(match.group(1))
+    return None
