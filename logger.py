@@ -1,55 +1,59 @@
-import os
-import sys
 import logging
-from logging.handlers import RotatingFileHandler
-from typing import Optional
+import sys
+from pathlib import Path
+from typing import Any, Optional
 
+class SafeRobloxLogger:
+    """Logger wrapper providing edge-case handling for Roblox automation tasks."""
 
-def setup_logger(
-    name: str = "roblox_automation",
-    log_dir: str = "logs",
-    log_file: str = "bot.log",
-    level: int = logging.INFO,
-    max_bytes: int = 5 * 1024 * 1024,
-    backup_count: int = 5
-) -> logging.Logger:
-    """
-    Configures and returns a logger instance with console and rotating file handlers.
-    Designed for multi-threaded Roblox automation scripts.
-    """
-    os.makedirs(log_dir, exist_ok=True)
-    file_path = os.path.join(log_dir, log_file)
+    def __init__(self, name: str = "RobloxAuto", log_file: Optional[str] = "logs/automation.log"):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.DEBUG)
+        self.log_file = log_file
+        self._setup_handlers()
 
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+    def _setup_handlers(self) -> None:
+        formatter = logging.Formatter(
+            "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
 
-    if logger.handlers:
-        return logger
+        # Standard console handler as primary output/fallback
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(formatter)
+        self.logger.addHandler(console_handler)
 
-    formatter = logging.Formatter(
-        fmt="[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
+        if not self.log_file:
+            return
 
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(level)
-    logger.addHandler(console_handler)
+        # Edge case: handle non-existent directories and permission errors
+        try:
+            log_path = Path(self.log_file)
+            log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    file_handler = RotatingFileHandler(
-        filename=file_path,
-        maxBytes=max_bytes,
-        backupCount=backup_count,
-        encoding="utf-8"
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-    logger.addHandler(file_handler)
+            file_handler = logging.FileHandler(log_path, encoding="utf-8")
+            file_handler.setFormatter(formatter)
+            self.logger.addHandler(file_handler)
+        except (PermissionError, OSError) as err:
+            self.logger.warning(
+                f"Could not create log file at '{self.log_file}': {err}. Using console only."
+            )
 
-    return logger
+    def log_safely(self, level: str, message: Any) -> None:
+        """Safely logs arbitrary data types, handling invalid levels and format errors."""
+        # Edge case: sanitize non-string or corrupted log payloads
+        try:
+            formatted_msg = str(message) if not isinstance(message, str) else message
+        except Exception as str_err:
+            formatted_msg = f"[Unstringifiable payload: {type(message).__name__}] (err: {str_err})"
 
+        # Edge case: fallback for invalid/unrecognized log levels
+        numeric_level = getattr(logging, str(level).upper(), None)
+        if not isinstance(numeric_level, int):
+            numeric_level = logging.INFO
+            formatted_msg = f"[Invalid Level '{level}'] {formatted_msg}"
 
-def get_session_logger(account_id: Optional[str] = None) -> logging.Logger:
-    """Helper to retrieve logger scoped for specific Roblox account sessions."""
-    logger_name = f"roblox_session.{account_id}" if account_id else "roblox_session"
-    return setup_logger(name=logger_name, log_file="session_activity.log")
+        try:
+            self.logger.log(numeric_level, formatted_msg)
+        except Exception as err:
+            sys.stderr.write(f"Logger failure while recording event: {err}\n")
