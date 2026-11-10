@@ -1,33 +1,39 @@
 import time
-import functools
-import requests
-from typing import Callable, Any
+import logging
+from functools import wraps
+from typing import Callable, Any, Tuple, Type
 
-def with_retry(max_attempts: int = 3, delay: float = 2.0):
+logger = logging.getLogger("roblox_automation")
+
+def retry_network_op(
+    max_retries: int = 3,
+    backoff_factor: float = 1.5,
+    allowed_exceptions: Tuple[Type[Exception], ...] = (Exception,)
+) -> Callable:
     """
-    Decorator to retry network requests on failure.
+    Decorator to retry network operations with exponential backoff.
+    Designed for Roblox API requests to handle rate limits and temporary drops.
     """
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            last_exception = None
-            for attempt in range(max_attempts):
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            current_delay = 1.0
+            for attempt in range(1, max_retries + 1):
                 try:
                     return func(*args, **kwargs)
-                except (requests.exceptions.RequestException, ConnectionError) as e:
-                    last_exception = e
-                    if attempt < max_attempts - 1:
-                        time.sleep(delay * (2 ** attempt))
-                        continue
-            raise last_exception
+                except allowed_exceptions as err:
+                    if attempt == max_retries:
+                        logger.error(
+                            f"Operation '{func.__name__}' failed permanently after "
+                            f"{max_retries} attempts. Final error: {err}"
+                        )
+                        raise err
+                    
+                    logger.warning(
+                        f"Network operation '{func.__name__}' attempt {attempt}/{max_retries} "
+                        f"failed: {err}. Retrying in {current_delay:.1f}s..."
+                    )
+                    time.sleep(current_delay)
+                    current_delay *= backoff_factor
         return wrapper
     return decorator
-
-@with_retry(max_attempts=3, delay=1.0)
-def fetch_roblox_api(url: str, session: requests.Session) -> dict:
-    """
-    Fetches data from roblox api with built-in retry logic.
-    """
-    response = session.get(url, timeout=10)
-    response.raise_for_status()
-    return response.json()
