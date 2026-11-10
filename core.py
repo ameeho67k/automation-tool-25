@@ -1,34 +1,36 @@
 import time
-import subprocess
-from typing import Optional
+import functools
+from typing import Callable, Any
 
-def get_roblox_process_id() -> Optional[int]:
-    """Finds the running Roblox process ID."""
-    cmd = 'tasklist /FI "imagename eq RobloxPlayerBeta.exe" /NH'
-    output = subprocess.check_output(cmd, shell=True).decode()
-    parts = output.split()
-    return int(parts[1]) if len(parts) > 1 else None
+# Cache for roblox api request results
+_CACHE = {}
 
-def inject_script(script_content: str, pid: int) -> bool:
-    """Simulates script injection into the target PID."""
-    try:
-        print(f"Injecting into process {pid}...")
-        # Placeholder for actual memory manipulation logic
+def memoize_request(ttl: int = 30):
+    """Performance decorator for rate-limited API calls."""
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            key = (func.__name__, str(args), str(kwargs))
+            now = time.time()
+            if key in _CACHE and (now - _CACHE[key]['time'] < ttl):
+                return _CACHE[key]['data']
+            result = func(*args, **kwargs)
+            _CACHE[key] = {'data': result, 'time': now}
+            return result
+        return wrapper
+    return decorator
+
+class RobloxAutomationCore:
+    def __init__(self):
+        self.batch_size = 50
+
+    @memoize_request(ttl=60)
+    def fetch_user_data(self, user_id: int) -> dict:
+        """Simulated core fetch operation with cached response."""
+        # Simulating external network latency
         time.sleep(0.5)
-        return True
-    except Exception:
-        return False
+        return {"id": user_id, "status": "active"}
 
-def wait_for_game(timeout: int = 30) -> bool:
-    """Blocks until Roblox is detected or timeout reached."""
-    start = time.time()
-    while time.time() - start < timeout:
-        if get_roblox_process_id():
-            return True
-        time.sleep(1)
-    return False
-
-def execute_task(task_name: str, delay: float = 1.0):
-    """Standardizes delay between automation steps."""
-    print(f"Executing: {task_name}")
-    time.sleep(delay)
+    def process_batch(self, user_ids: list[int]) -> list[dict]:
+        """Optimized batch processing using list comprehension."""
+        return [self.fetch_user_data(uid) for uid in user_ids[:self.batch_size]]
