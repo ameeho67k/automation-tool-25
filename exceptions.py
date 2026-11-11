@@ -1,33 +1,27 @@
 class AutomationError(Exception):
-    """Base exception for automation-tool-25"""
+    """Base exception for all automation-tool-25 errors."""
     pass
 
 class RobloxSessionError(AutomationError):
-    """Raised when the Roblox session is invalid or expired"""
+    """Raised when session state is invalid or disconnected."""
     pass
 
-class RateLimitError(AutomationError):
-    """Raised when API requests exceed threshold"""
-    def __init__(self, retry_after=60):
+class RateLimitExceeded(AutomationError):
+    """Raised when Roblox API limits are hit."""
+    def __init__(self, retry_after: int):
         self.retry_after = retry_after
-        super().__init__(f"Rate limit exceeded. Retry in {retry_after} seconds")
+        super().__init__(f"API rate limit exceeded. Retry after {retry_after}s")
 
-class ElementNotFoundError(AutomationError):
-    """Raised when a specific UI element is not found"""
+class ScriptInjectionError(AutomationError):
+    """Raised when script execution fails within the environment."""
     pass
 
-class NetworkTimeoutError(AutomationError):
-    """Raised when a connection to Roblox servers times out"""
+class MemoryThresholdError(AutomationError):
+    """Raised when local memory usage exceeds safe limits."""
     pass
 
-def raise_if_not_valid(condition: bool, message: str):
-    """Helper to enforce state conditions"""
-    if not condition:
-        raise AutomationError(message)
-
-def handle_automation_exception(e: Exception):
-    """Unified logging interface for custom exceptions"""
-    if isinstance(e, AutomationError):
-        print(f"[Automation Error]: {e}")
-    else:
-        print(f"[Critical System Error]: {type(e).__name__} - {e}")
+def handle_critical_failure(error: Exception):
+    """Logs and re-raises core automation exceptions."""
+    if isinstance(error, AutomationError):
+        print(f"[CRITICAL] {error.__class__.__name__}: {str(error)}")
+    raise error
