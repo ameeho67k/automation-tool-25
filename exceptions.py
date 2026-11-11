@@ -1,40 +1,33 @@
-"""Custom exceptions for Roblox API and data handling in automation-tool-25."""
+class AutomationError(Exception):
+    """Base exception for automation-tool-25"""
+    pass
 
-class RobloxAutomationError(Exception):
-    """Base exception class for automation-tool-25 errors."""
-    def __init__(self, message: str = "An unknown error occurred during Roblox automation"):
-        self.message = message
-        super().__init__(self.message)
+class RobloxSessionError(AutomationError):
+    """Raised when the Roblox session is invalid or expired"""
+    pass
 
-
-class CookieInvalidError(RobloxAutomationError):
-    """Raised when the provided .ROBLOSECURITY cookie is invalid or expired."""
-    def __init__(self, message: str = "Provided Roblox security cookie is invalid or expired"):
-        super().__init__(message)
-
-
-class RateLimitError(RobloxAutomationError):
-    """Raised when Roblox API rate limit is hit."""
-    def __init__(self, retry_after: int = 60, endpoint: str = ""):
+class RateLimitError(AutomationError):
+    """Raised when API requests exceed threshold"""
+    def __init__(self, retry_after=60):
         self.retry_after = retry_after
-        self.endpoint = endpoint
-        msg = f"Rate limit reached for '{endpoint}'. Retry after {retry_after}s" if endpoint else f"Rate limit reached. Retry after {retry_after}s"
-        super().__init__(msg)
+        super().__init__(f"Rate limit exceeded. Retry in {retry_after} seconds")
 
+class ElementNotFoundError(AutomationError):
+    """Raised when a specific UI element is not found"""
+    pass
 
-class AssetNotFoundError(RobloxAutomationError):
-    """Raised when a requested Roblox asset or place cannot be found."""
-    def __init__(self, asset_id: int):
-        self.asset_id = asset_id
-        super().__init__(f"Roblox asset or entity with ID '{asset_id}' was not found")
+class NetworkTimeoutError(AutomationError):
+    """Raised when a connection to Roblox servers times out"""
+    pass
 
+def raise_if_not_valid(condition: bool, message: str):
+    """Helper to enforce state conditions"""
+    if not condition:
+        raise AutomationError(message)
 
-class DataValidationError(RobloxAutomationError):
-    """Raised when parsed Roblox JSON payload fails field validation."""
-    def __init__(self, field_name: str, expected_type: str, actual_type: str):
-        self.field_name = field_name
-        self.expected_type = expected_type
-        self.actual_type = actual_type
-        super().__init__(
-            f"Data validation failed for field '{field_name}': expected {expected_type}, got {actual_type}"
-        )
+def handle_automation_exception(e: Exception):
+    """Unified logging interface for custom exceptions"""
+    if isinstance(e, AutomationError):
+        print(f"[Automation Error]: {e}")
+    else:
+        print(f"[Critical System Error]: {type(e).__name__} - {e}")
