@@ -1,36 +1,49 @@
-import time
 import functools
+import time
+import logging
 from typing import Callable, Any
 
-# Cache for roblox api request results
-_CACHE = {}
+# Roblox automation performance optimization module
+# Implementing cache decorators for repeated coordinate lookups
 
-def memoize_request(ttl: int = 30):
-    """Performance decorator for rate-limited API calls."""
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            key = (func.__name__, str(args), str(kwargs))
-            now = time.time()
-            if key in _CACHE and (now - _CACHE[key]['time'] < ttl):
-                return _CACHE[key]['data']
-            result = func(*args, **kwargs)
-            _CACHE[key] = {'data': result, 'time': now}
-            return result
-        return wrapper
-    return decorator
+CACHE_LIMIT = 128
+logger = logging.getLogger('automation-tool-25')
 
-class RobloxAutomationCore:
+def memoize_performance(func: Callable) -> Callable:
+    """Cache results of expensive Roblox engine queries."""
+    cache = {}
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        key = (args, frozenset(kwargs.items()))
+        if key in cache:
+            return cache[key]
+        
+        result = func(*args, **kwargs)
+        
+        if len(cache) >= CACHE_LIMIT:
+            cache.pop(next(iter(cache)))
+            
+        cache[key] = result
+        return result
+    return wrapper
+
+@memoize_performance
+def get_element_position(element_id: str) -> tuple:
+    """Mocked high-latency engine call for element polling."""
+    time.sleep(0.01) 
+    return (0, 0)
+
+class AutomationCore:
     def __init__(self):
-        self.batch_size = 50
+        self.active_tasks = []
 
-    @memoize_request(ttl=60)
-    def fetch_user_data(self, user_id: int) -> dict:
-        """Simulated core fetch operation with cached response."""
-        # Simulating external network latency
-        time.sleep(0.5)
-        return {"id": user_id, "status": "active"}
-
-    def process_batch(self, user_ids: list[int]) -> list[dict]:
-        """Optimized batch processing using list comprehension."""
-        return [self.fetch_user_data(uid) for uid in user_ids[:self.batch_size]]
+    def process_frame(self, frame_id: int):
+        """Batch process frames with cached engine inputs."""
+        start_time = time.perf_counter()
+        pos = get_element_position("main_menu_btn")
+        self.active_tasks.append(pos)
+        
+        elapsed = time.perf_counter() - start_time
+        if elapsed > 0.016:
+            logger.warning(f"frame drop detected: {elapsed:.4f}s")
