@@ -1,17 +1,19 @@
 # automation-tool-25
 
-A high-performance Roblox automation framework built in Python for developers. This tool streamlines game testing and task execution by interfacing directly with the Roblox engine environment.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Features
+Automation-tool-25 is a robust Python-based framework designed to streamline administrative tasks and data extraction for Roblox experiences. This tool leverages high-performance libraries to handle repetitive operations efficiently while maintaining compatibility with modern Roblox API structures.
 
-*   **Headless Execution:** Run automation scripts without rendering the full 3D viewport, significantly reducing CPU and memory overhead.
-*   **API-First Design:** Full support for custom scripting plugins, allowing for modular control over game objects and services.
-*   **Reliability Engine:** Built-in automatic reconnection logic and error recovery for long-running automation tasks.
-*   **Low-Level Interaction:** Efficiently read and write game state data using optimized memory-mapping techniques.
+### Key Features
 
-## Installation
+*   **Automated Data Logging:** Automatically fetch and store player session data and transaction logs into local CSV/JSON formats.
+*   **Session Management:** Built-in cookie handling and session persistence to prevent frequent re-authentication triggers.
+*   **Asynchronous Processing:** Utilizes `asyncio` for high-concurrency requests, allowing for lightning-fast operations across large datasets.
+*   **Headless Execution:** Designed for headless environment deployment, ideal for integration into CI/CD pipelines or remote server monitoring.
 
-Ensure you have Python 3.10+ installed. Clone the repository and install the required dependencies:
+### Installation
+
+Ensure you have Python 3.9+ installed. Clone the repository and install the required dependencies:
 
 ```bash
 git clone https://github.com/Developer/automation-tool-25.git
@@ -19,28 +21,27 @@ cd automation-tool-25
 pip install -r requirements.txt
 ```
 
-## Usage
+### Usage
 
-Configure your target settings in `config.yaml`, then execute the tool using the following command:
+Configure your `config.json` with your authentication token, then execute the main module to start the automation process:
 
 ```python
 from automation import BotClient
 
-# Initialize the client
-client = BotClient(config_path="config.yaml")
+# Initialize the client with your configuration
+bot = BotClient(config_path="config.json")
 
-# Run the task
-client.start(target_game_id="123456789")
+# Start the event loop for automated tasks
+bot.run()
 ```
 
-For advanced users, you can pass custom behavioral flags via the command line:
+For advanced users, you can import specific utility modules directly:
+```python
+from automation.utils import DataParser
 
-```bash
-python main.py --headless --loop --retry-limit 5
+data = DataParser.fetch_live_stats(place_id="123456789")
+print(f"Current active players: {data['player_count']}")
 ```
 
-## License
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
+### License
 Distributed under the MIT License. See `LICENSE` for more information.
