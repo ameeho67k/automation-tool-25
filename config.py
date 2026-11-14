@@ -3,31 +3,30 @@ import os
 from typing import Any, Dict
 
 DEFAULT_CONFIG = {
-    "roblox_account_id": None,
-    "target_game_id": 123456789,
+    "roblox_cookie": "",
+    "max_retries": 3,
     "headless_mode": True,
-    "retry_attempts": 3,
-    "log_level": "INFO"
+    "log_level": "INFO",
+    "proxy_url": None
 }
 
-def load_config(filepath: str = "config.json") -> Dict[str, Any]:
-    """Loads configuration from disk or returns defaults."""
-    if not os.path.exists(filepath):
-        save_config(filepath, DEFAULT_CONFIG)
-        return DEFAULT_CONFIG
+def load_config(file_path: str = "config.json") -> Dict[str, Any]:
+    """Loads configuration from disk with fallback to defaults."""
+    config = DEFAULT_CONFIG.copy()
+    
+    if not os.path.exists(file_path):
+        return config
 
     try:
-        with open(filepath, "r") as f:
-            config = json.load(f)
-            # Merge defaults for missing keys
-            return {**DEFAULT_CONFIG, **config}
-    except (json.JSONDecodeError, IOError):
-        return DEFAULT_CONFIG
+        with open(file_path, "r") as f:
+            user_data = json.load(f)
+            config.update(user_data)
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Config load error: {e}, using defaults")
+        
+    return config
 
-def save_config(filepath: str, config: Dict[str, Any]) -> None:
-    """Persists configuration dictionary to a json file."""
-    with open(filepath, "w") as f:
+def save_config(config: Dict[str, Any], file_path: str = "config.json") -> None:
+    """Persists current configuration to disk."""
+    with open(file_path, "w") as f:
         json.dump(config, f, indent=4)
-
-# Initialization helper
-current_config = load_config()
