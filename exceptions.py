@@ -1,27 +1,31 @@
 class AutomationError(Exception):
-    """Base exception for all automation-tool-25 errors."""
+    """Base exception for automation-tool-25"""
     pass
 
 class RobloxSessionError(AutomationError):
-    """Raised when session state is invalid or disconnected."""
+    """Raised when the Roblox session is invalid or expired"""
+    pass
+
+class DataParsingError(AutomationError):
+    """Raised when JSON or API response schema is unexpected"""
     pass
 
 class RateLimitExceeded(AutomationError):
-    """Raised when Roblox API limits are hit."""
-    def __init__(self, retry_after: int):
+    """Raised when hitting Roblox API rate limits"""
+    def __init__(self, retry_after: int = 60):
         self.retry_after = retry_after
-        super().__init__(f"API rate limit exceeded. Retry after {retry_after}s")
+        super().__init__(f"Rate limit exceeded. Retry after {retry_after} seconds")
 
-class ScriptInjectionError(AutomationError):
-    """Raised when script execution fails within the environment."""
+class AssetAccessError(AutomationError):
+    """Raised when restricted or private assets are accessed"""
     pass
 
-class MemoryThresholdError(AutomationError):
-    """Raised when local memory usage exceeds safe limits."""
-    pass
-
-def handle_critical_failure(error: Exception):
-    """Logs and re-raises core automation exceptions."""
-    if isinstance(error, AutomationError):
-        print(f"[CRITICAL] {error.__class__.__name__}: {str(error)}")
+def handle_roblox_error(error: Exception):
+    """Utility for logging and categorizing automation errors"""
+    if isinstance(error, RateLimitExceeded):
+        print(f"[!] Throttled by Roblox: {error}")
+    elif isinstance(error, RobloxSessionError):
+        print("[!] Session expired. Re-authentication required.")
+    else:
+        print(f"[!] Unexpected automation failure: {error}")
     raise error
