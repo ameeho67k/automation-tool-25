@@ -1,30 +1,38 @@
-import os
+from typing import Final, Dict, List
 
-# Configuration paths and default values
-BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-LOG_DIRECTORY = os.path.join(BASE_PATH, 'logs')
+# Configuration constants for automation-tool-25
+# Target endpoints for Roblox web API interactions
 
-# Roblox process identification constants
-ROBLOX_PROCESS_NAMES = ('RobloxPlayerBeta.exe', 'RobloxPlayerLauncher.exe')
+ROBLOX_BASE_URL: Final[str] = "https://roblox.com"
+API_BASE_URL: Final[str] = "https://apis.roblox.com"
 
-# Network and timeout settings
-DEFAULT_TIMEOUT = 30
-RETRY_ATTEMPTS = 3
-REQUEST_DELAY = 1.5
+DEFAULT_TIMEOUT: Final[float] = 30.0
+RETRY_ATTEMPTS: Final[int] = 3
 
-# Automation state constants
-STATUS_IDLE = 'IDLE'
-STATUS_RUNNING = 'RUNNING'
-STATUS_ERROR = 'ERROR'
+# Header templates for session authentication
+DEFAULT_HEADERS: Final[Dict[str, str]] = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) RobloxAutomation/1.0",
+    "Accept": "application/json",
+    "Content-Type": "application/json"
+}
 
-# Keybindings and interaction defaults
-INTERACTION_KEY = 'e'
-SCAN_INTERVAL = 0.5
+# Status codes for internal handler state tracking
+SUCCESS_CODE: Final[int] = 200
+RATE_LIMITED_CODE: Final[int] = 429
+UNAUTHORIZED_CODE: Final[int] = 401
 
-# API endpoints
-AUTH_ENDPOINT = 'https://auth.roblox.com/v1'
-USER_ENDPOINT = 'https://users.roblox.com/v1'
+# Supported job categories for automation processing
+JOB_TYPES: Final[List[str]] = [
+    "asset_upload",
+    "group_management",
+    "inventory_scan",
+    "profile_sync"
+]
 
-# Supported environment flags
-DEBUG_MODE = os.getenv('ROBLOX_DEBUG', 'False') == 'True'
-HEADLESS_MODE = os.getenv('ROBLOX_HEADLESS', 'False') == 'True'
+def get_timeout_settings() -> float:
+    """Return the default timeout duration for requests."""
+    return DEFAULT_TIMEOUT
+
+def get_api_base() -> str:
+    """Return the base URL used for Roblox API calls."""
+    return API_BASE_URL
