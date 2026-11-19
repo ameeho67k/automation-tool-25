@@ -1,31 +1,33 @@
 class AutomationError(Exception):
-    """Base exception for automation-tool-25"""
+    """Base exception for all automation-tool-25 errors."""
     pass
 
 class RobloxSessionError(AutomationError):
-    """Raised when the Roblox session is invalid or expired"""
-    pass
-
-class DataParsingError(AutomationError):
-    """Raised when JSON or API response schema is unexpected"""
+    """Raised when the Roblox session is invalid or expired."""
     pass
 
 class RateLimitExceeded(AutomationError):
-    """Raised when hitting Roblox API rate limits"""
-    def __init__(self, retry_after: int = 60):
+    """Raised when API requests exceed threshold."""
+    def __init__(self, retry_after: int):
         self.retry_after = retry_after
-        super().__init__(f"Rate limit exceeded. Retry after {retry_after} seconds")
+        super().__init__(f"Rate limit exceeded. Retry after {retry_after}s")
 
-class AssetAccessError(AutomationError):
-    """Raised when restricted or private assets are accessed"""
+class MemoryOptimizationError(AutomationError):
+    """Raised when process memory exceeds safe bounds."""
     pass
 
-def handle_roblox_error(error: Exception):
-    """Utility for logging and categorizing automation errors"""
-    if isinstance(error, RateLimitExceeded):
-        print(f"[!] Throttled by Roblox: {error}")
-    elif isinstance(error, RobloxSessionError):
-        print("[!] Session expired. Re-authentication required.")
-    else:
-        print(f"[!] Unexpected automation failure: {error}")
-    raise error
+class ProcessInterruptError(AutomationError):
+    """Raised when an automation process is forcefully halted."""
+    pass
+
+def raise_if_memory_critical(current_usage: float, threshold: float) -> None:
+    """Performance guard to prevent OOM crashes in core module."""
+    if current_usage > threshold:
+        raise MemoryOptimizationError(f"Memory usage {current_usage}MB above threshold {threshold}MB")
+
+def handle_roblox_error(status_code: int) -> None:
+    """Maps network status codes to custom performance-aware exceptions."""
+    if status_code == 429:
+        raise RateLimitExceeded(retry_after=60)
+    if status_code >= 500:
+        raise RobloxSessionError("Server-side error encountered")
