@@ -1,40 +1,28 @@
+import json
 import os
 import time
-import logging
-from typing import List, Optional
+import random
 
-logger = logging.getLogger('automation-tool-25')
+def get_roblox_auth_header(cookie: str) -> dict:
+    """Constructs authorization headers for Roblox API requests."""
+    return {"Cookie": f".ROBLOSECURITY={cookie}", "User-Agent": "Roblox/WinInet"}
 
-def validate_roblox_path(path: str) -> bool:
-    """Verify Roblox executable existence and path integrity."""
-    return os.path.exists(path) and path.endswith('.exe')
+def simulate_human_delay(min_sec: float = 0.5, max_sec: float = 2.0):
+    """Applies random sleep to mimic human interaction patterns."""
+    time.sleep(random.uniform(min_sec, max_sec))
 
-def retry_operation(func, retries: int = 3, delay: int = 2):
-    """Generic execution wrapper for unstable Roblox API calls."""
-    for attempt in range(retries):
-        try:
-            return func()
-        except Exception as e:
-            logger.warning(f"Attempt {attempt + 1} failed: {e}")
-            time.sleep(delay)
-    return None
+def save_to_json(data: dict, filename: str):
+    """Utility to persist dictionary data into JSON files."""
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=4)
 
-def format_session_data(raw_data: dict) -> dict:
-    """Standardize raw roblox session telemetry data."""
-    return {
-        'user_id': raw_data.get('id'),
-        'is_active': raw_data.get('status') == 'online',
-        'timestamp': time.time()
-    }
+def load_config(filepath: str) -> dict:
+    """Reads configuration from a specified JSON path."""
+    if not os.path.exists(filepath):
+        return {}
+    with open(filepath, 'r') as f:
+        return json.load(f)
 
-def cleanup_temp_files(directory: str, extension: str = '.tmp') -> None:
-    """Purge orphaned temporary workspace assets."""
-    if not os.path.exists(directory):
-        return
-    
-    for file in os.listdir(directory):
-        if file.endswith(extension):
-            try:
-                os.remove(os.path.join(directory, file))
-            except OSError as e:
-                logger.error(f"Cleanup failure: {e}")
+def validate_roblox_id(asset_id: int) -> bool:
+    """Ensures asset IDs are positive integers."""
+    return isinstance(asset_id, int) and asset_id > 0
