@@ -1,58 +1,35 @@
 import logging
-from typing import Dict, List, Any
+from typing import List, Dict, Any
 
-logger = logging.getLogger("automation.processor")
+# Configure logging for automation operations
+logger = logging.getLogger('automation-tool-25')
 
-class AssetProcessingError(Exception):
-    """Raised when asset data fails standard processing rules."""
-    pass
+class RobloxProcessor:
+    """Handles Roblox data stream parsing and clean-up tasks."""
 
-class AssetProcessor:
-    """Processes Roblox asset responses and normalizes data for automation tasks."""
+    def __init__(self, workspace_id: str):
+        self.workspace_id = workspace_id
+        self.cache: Dict[str, Any] = {}
 
-    def __init__(self, max_retries: int = 3, retry_delay: float = 1.0):
-        self.max_retries = max_retries
-        self.retry_delay = retry_delay
-
-    def parse_asset_item(self, item_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Extracts essential asset fields with strict edge case validation."""
-        if not isinstance(item_data, dict):
-            raise AssetProcessingError("Payload item must be a dictionary")
-
-        asset_id = item_data.get("id") or item_data.get("assetId")
-        if not asset_id or not str(asset_id).isdigit():
-            raise AssetProcessingError(f"Invalid or missing asset ID: {asset_id}")
-
-        # Handle non-standard price representations and null values
-        price = item_data.get("price")
-        if price is None or not isinstance(price, (int, float)) or price < 0:
-            logger.warning(f"Asset {asset_id} has invalid price '{price}'. Defaulting to 0.")
-            price = 0
-
-        creator_info = item_data.get("creator") or {}
-        creator_id = creator_info.get("id", 0) if isinstance(creator_info, dict) else 0
-
+    def sanitize_input(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Removes invalid keys and strips whitespace from strings."""
         return {
-            "asset_id": int(asset_id),
-            "name": str(item_data.get("name", "Unknown Asset")).strip(),
-            "price": int(price),
-            "is_purchasable": bool(item_data.get("isPurchasable", False)) and not bool(item_data.get("isOffSale", False)),
-            "creator_id": int(creator_id)
+            str(k).strip(): (v.strip() if isinstance(v, str) else v)
+            for k, v in raw_data.items() if v is not None
         }
 
-    def batch_process(self, raw_assets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Processes a list of raw asset records, skipping invalid items safely."""
-        if not isinstance(raw_assets, list):
-            logger.error("Expected list for raw_assets batch processing")
-            return []
-
+    def process_batch(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Executes batch cleaning of raw Roblox automation logs."""
         processed = []
-        for item in raw_assets:
+        for task in tasks:
             try:
-                result = self.parse_asset_item(item)
-                processed.append(result)
-            except AssetProcessingError as err:
-                logger.warning(f"Skipping invalid asset payload: {err}")
-            except Exception as err:
-                logger.error(f"Unexpected error processing asset payload: {err}")
+                clean_task = self.sanitize_input(task)
+                processed.append(clean_task)
+            except Exception as e:
+                logger.error(f"Failed processing task {task.get('id')}: {e}")
         return processed
+
+    def clear_cache(self) -> None:
+        """Resets internal task state and clears stale cache."""
+        self.cache.clear()
+        logger.info(f"Cache cleared for workspace: {self.workspace_id}")
