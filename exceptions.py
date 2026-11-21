@@ -1,33 +1,29 @@
-class AutomationError(Exception):
-    """Base exception for all automation-tool-25 errors."""
+from typing import Optional
+
+class RobloxAutomationError(Exception):
+    """Base exception class for all automation-tool-25 errors."""
+    def __init__(self, message: str, code: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.code = code
+
+class AuthenticationError(RobloxAutomationError):
+    """Raised when Roblox session authentication fails."""
     pass
 
-class RobloxSessionError(AutomationError):
-    """Raised when the Roblox session is invalid or expired."""
+class NetworkTimeoutError(RobloxAutomationError):
+    """Raised when a request to Roblox API times out."""
     pass
 
-class RateLimitExceeded(AutomationError):
-    """Raised when API requests exceed threshold."""
-    def __init__(self, retry_after: int):
+class RateLimitError(RobloxAutomationError):
+    """Raised when the tool hits Roblox API rate limits."""
+    def __init__(self, retry_after: int) -> None:
+        super().__init__(f"Rate limit exceeded, retry after {retry_after} seconds", code=429)
         self.retry_after = retry_after
-        super().__init__(f"Rate limit exceeded. Retry after {retry_after}s")
 
-class MemoryOptimizationError(AutomationError):
-    """Raised when process memory exceeds safe bounds."""
+class InstanceNotFoundError(RobloxAutomationError):
+    """Raised when a specific Roblox instance or ID is not found."""
     pass
 
-class ProcessInterruptError(AutomationError):
-    """Raised when an automation process is forcefully halted."""
+class ValidationError(RobloxAutomationError):
+    """Raised when configuration or input parameters are invalid."""
     pass
-
-def raise_if_memory_critical(current_usage: float, threshold: float) -> None:
-    """Performance guard to prevent OOM crashes in core module."""
-    if current_usage > threshold:
-        raise MemoryOptimizationError(f"Memory usage {current_usage}MB above threshold {threshold}MB")
-
-def handle_roblox_error(status_code: int) -> None:
-    """Maps network status codes to custom performance-aware exceptions."""
-    if status_code == 429:
-        raise RateLimitExceeded(retry_after=60)
-    if status_code >= 500:
-        raise RobloxSessionError("Server-side error encountered")
