@@ -1,40 +1,26 @@
+import time
+import functools
 import logging
+from typing import Callable, Any
 
 logger = logging.getLogger('automation-tool-25')
 
-def validate_roblox_input(data: dict) -> bool:
-    """
-    Validates input structure for roblox automation tasks.
-    Checks for presence of required keys and data types.
-    """
-    required_fields = {
-        'place_id': int,
-        'job_id': str,
-        'action': str
-    }
-
-    try:
-        for field, expected_type in required_fields.items():
-            if field not in data:
-                logger.warning(f"missing required field: {field}")
-                return False
+def retry_on_failure(retries: int = 3, delay: float = 1.5) -> Callable:
+    """Decorator to retry network functions on exception."""
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            last_exception = None
+            for attempt in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    logger.warning(f"Attempt {attempt + 1} failed for {func.__name__}: {e}")
+                    if attempt < retries - 1:
+                        time.sleep(delay)
             
-            if not isinstance(data[field], expected_type):
-                logger.warning(f"invalid type for {field}: expected {expected_type.__name__}")
-                return False
-
-        if data['action'] not in ['join', 'leave', 'teleport']:
-            logger.warning(f"unsupported action type: {data['action']}")
-            return False
-            
-        return True
-        
-    except Exception as e:
-        logger.error(f"validation error: {str(e)}")
-        return False
-
-def process_loop_input(raw_input: dict):
-    """Main loop entry for input validation checks."""
-    if not validate_roblox_input(raw_input):
-        return None
-    return raw_input
+            logger.error(f"Final attempt failed for {func.__name__} after {retries} retries")
+            raise last_exception
+        return wrapper
+    return decorator
