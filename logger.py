@@ -1,51 +1,35 @@
-import os
-import sys
 import logging
-from logging.handlers import RotatingFileHandler
+import os
+from datetime import datetime
 
-# Default log settings for roblox automation bot
-LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
-MAX_LOG_SIZE = 5 * 1024 * 1024  # 5 MB per log file
-BACKUP_COUNT = 3  # Keep up to 3 old log files
-LOG_FORMAT = "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
-DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+class RobloxAutomationLogger:
+    """Centralized logging handler for automation-tool-25."""
+    
+    def __init__(self, name: str = "automation_tool"):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+        
+        # Ensure log directory exists
+        log_dir = "logs"
+        if not os.path.exists(log_dir):
+            try:
+                os.makedirs(log_dir)
+            except OSError as e:
+                print(f"Critical: Failed to create log directory: {e}")
+        
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler = logging.FileHandler(f"{log_dir}/app_{datetime.now().strftime('%Y%m%d')}.log")
+        file_handler.setFormatter(formatter)
+        self.logger.addHandler(file_handler)
 
+    def log_error(self, message: str, exc: Exception = None):
+        """Handles edge cases for unexpected runtime exceptions."""
+        context = f" | Exception: {type(exc).__name__}: {str(exc)}" if exc else ""
+        self.logger.error(f"{message}{context}")
 
-def get_logger(name: str = "roblox_automation") -> logging.Logger:
-    """Initializes and returns a standard logger with stdout and rotating file handlers."""
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    def log_event(self, message: str):
+        """Standard event tracking for roblox automation tasks."""
+        self.logger.info(message)
 
-    # Prevent adding handlers repeatedly if already configured
-    if logger.hasHandlers():
-        return logger
-
-    # Ensure logs directory exists
-    if not os.path.exists(LOG_DIR):
-        os.makedirs(LOG_DIR, exist_ok=True)
-
-    formatter = logging.Formatter(LOG_FORMAT, datefmt=DATE_FORMAT)
-
-    # Console handler for realtime stdout feedback
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    # Rotating file handler for session logging
-    log_path = os.path.join(LOG_DIR, "automation.log")
-    file_handler = RotatingFileHandler(
-        log_path,
-        maxBytes=MAX_LOG_SIZE,
-        backupCount=BACKUP_COUNT,
-        encoding="utf-8"
-    )
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-
-    return logger
-
-
-# Pre-configured logger instance
-bot_logger = get_logger()
+# Instantiate singleton instance
+app_logger = RobloxAutomationLogger()
