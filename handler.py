@@ -1,28 +1,26 @@
 import json
-from typing import Any, Dict, Optional
+import base64
 
-def encode_roblox_data(data: Dict[str, Any]) -> str:
-    """Converts python dictionary to a standardized JSON string for roblox API"""
+def decode_roblox_data(payload: str) -> dict:
+    """Decodes base64 encoded roblox game data payload."""
+    try:
+        decoded_bytes = base64.b64decode(payload)
+        return json.loads(decoded_bytes.decode('utf-8'))
+    except (ValueError, TypeError, json.JSONDecodeError) as e:
+        return {"error": "invalid_payload", "details": str(e)}
+
+def format_data_for_roblox(data: dict) -> str:
+    """Serializes dictionary to compact JSON string."""
     return json.dumps(data, separators=(',', ':'))
 
-def decode_roblox_data(payload: str) -> Optional[Dict[str, Any]]:
-    """Safely parses roblox response payloads with basic error handling"""
-    try:
-        return json.loads(payload)
-    except (json.JSONDecodeError, TypeError):
-        return None
+def validate_game_payload(data: dict) -> bool:
+    """Checks if dictionary contains core roblox keys."""
+    required_keys = ['PlayerID', 'Timestamp', 'ActionID']
+    return all(key in data for key in required_keys)
 
-def format_player_data(user_id: int, stats: Dict[str, Any]) -> Dict[str, Any]:
-    """Structure player stat payloads for consistency"""
-    return {
-        "userId": user_id,
-        "stats": stats,
-        "version": "1.0.0",
-        "timestamp": None  # Server should inject epoch here
-    }
-
-def sanitize_input(value: Any) -> Any:
-    """Filter raw input data to prevent injection during API requests"""
-    if isinstance(value, str):
-        return value.replace("\"", "\'").strip()
-    return value
+def process_roblox_packet(raw_packet: str) -> dict:
+    """Pipeline for decoding and validating roblox packets."""
+    data = decode_roblox_data(raw_packet)
+    if "error" in data or not validate_game_payload(data):
+        return {"status": "failed", "payload": data}
+    return {"status": "success", "data": data}
